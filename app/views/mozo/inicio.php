@@ -1,55 +1,6 @@
-<?php
-// filepath: c:\xampp\htdocs\MesaLista\app\views\mozo\inicio.php
-if (!defined('BASE_URL'))
-    require_once __DIR__ . '/../../../config/config.php';
-
-require_once __DIR__ . '/../../models/MesaModel.php';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['eliminar_mesa_id'])) {
-    $mesaModel = new MesaModel();
-    $mesaModel->eliminarMesa($_POST['eliminar_mesa_id']);
-    header("Location: " . BASE_URL . "/mozo");
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['agregar_mesa'])) {
-    $mesaModel = new MesaModel();
-    $mesaModel->agregarMesa();
-    header("Location: " . BASE_URL . "/mozo?mesa_agregada=1");
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mesa_ids'])) {
-    $mesaModel = new MesaModel();
-    $mesaIds = json_decode($_POST['mesa_ids'], true);
-    
-    if (count($mesaIds) == 2) {
-        $mesaModel->juntarMesas($mesaIds[0], $mesaIds[1]);
-    }
-    
-    header("Location: " . BASE_URL . "/mozo");
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['separar_mesa_nombre'])) {
-    $mesaModel = new MesaModel();
-    $mesaModel->separarMesa($_POST['separar_mesa_nombre']);
-    header("Location: " . BASE_URL . "/mozo");
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], $_POST['nuevo_estado'])) {
-    $mesaModel = new MesaModel();
-    $mesaModel->cambiarEstado($_POST['cambiar_estado_id'], $_POST['nuevo_estado']);
-    header("Location: " . BASE_URL . "/mozo");
-    exit;
-}
-
-?>
-
+<?php if (!defined('BASE_URL')) require_once __DIR__ . '/../../../config/config.php'; ?>
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8" />
     <title>Panel Mozo - MesaLista</title>
@@ -60,50 +11,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
-/* Estilos adicionales para selección múltiple */
-.mesa-card.seleccionada {
-    border: 3px solid #0d6efd !important;
-    box-shadow: 0 0 20px rgba(13, 110, 253, 0.5) !important;
-    transform: scale(1.05);
-}
+        /* Estilos adicionales para selección múltiple */
+        .mesa-card.seleccionada {
+            border: 3px solid #0d6efd !important;
+            box-shadow: 0 0 20px rgba(13, 110, 253, 0.5) !important;
+            transform: scale(1.05);
+        }
 
-.mesa-card.seleccionada-multiple {
-    border: 3px solid #28a745 !important;
-    box-shadow: 0 0 20px rgba(40, 167, 69, 0.5) !important;
-}
+        .mesa-card.seleccionada-multiple {
+            border: 3px solid #28a745 !important;
+            box-shadow: 0 0 20px rgba(40, 167, 69, 0.5) !important;
+        }
 
-.menu-icon-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+        .menu-icon-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-.menu-icon-btn:disabled img {
-    filter: grayscale(100%);
-}
+        .menu-icon-btn:disabled img {
+            filter: grayscale(100%);
+        }
 
-.mesa-combinada {
-    background-color: #17a2b8 !important;
-    color: white;
-}
+        .mesa-combinada {
+            background-color: #17a2b8 !important;
+            color: white;
+        }
 
-.mesa-nombre-combinado {
-    font-size: 0.9rem;
-    font-weight: bold;
-}
+        .mesa-nombre-combinado {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
 
-#mensajeSeleccionMultiple {
-    position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1050;
-    width: auto;
-    padding: 12px 24px;
-    font-weight: bold;
-    font-size: 14px;
-}
-</style>
+        #mensajeSeleccionMultiple {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1050;
+            width: auto;
+            padding: 12px 24px;
+            font-weight: bold;
+            font-size: 14px;
+        }
 
+        /* Indicador de tiempo para mesas con comanda */
+        .tiempo-comanda {
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .tiempo-comanda.text-warning {
+            color: #ffc107 !important;
+        }
+
+        .tiempo-comanda.text-danger {
+            color: #dc3545 !important;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 
 <body>
@@ -143,7 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                             <span>Juntar Mesas</span>
                         </button>
                     </div>
-
                     <div class="col text-center">
                         <button class="menu-icon-btn" id="btnAgregarMesa">
                             <img src="<?= BASE_URL ?>/public/assets/img/Agregar.png" alt="Agregar Mesa">
@@ -198,67 +170,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
             </div>
 
             <div class="row g-3" id="contenedorMesas">
-                <?php foreach ($mesas as $mesa): ?>
-                    <?php
-                    // Determinar color del badge según estado
-                    $badgeColor = 'secondary';
-                    if ($mesa['estado'] === 'reservado') $badgeColor = 'warning';
-                    elseif ($mesa['estado'] === 'esperando') $badgeColor = 'danger';
-                    elseif ($mesa['estado'] === 'pagando') $badgeColor = 'success';
-                    elseif ($mesa['estado'] === 'combinada') $badgeColor = 'info';
+                <?php if (isset($mesas) && is_array($mesas)): ?>
+                    <?php foreach ($mesas as $mesa): ?>
+                        <?php
+                        // Determinar color del badge según estado
+                        $badgeColor = 'secondary';
+                        if ($mesa['estado'] === 'reservado') $badgeColor = 'warning';
+                        elseif ($mesa['estado'] === 'esperando') $badgeColor = 'danger';
+                        elseif ($mesa['estado'] === 'pagando') $badgeColor = 'success';
+                        elseif ($mesa['estado'] === 'combinada') $badgeColor = 'info';
 
-                    // Clases para la tarjeta según estado
-                    $clase = 'mesa-libre';
-                    if ($mesa['estado'] === 'reservado')
-                        $clase = 'mesa-reservado';
-                    elseif ($mesa['estado'] === 'esperando')
-                        $clase = 'mesa-esperando';
-                    elseif ($mesa['estado'] === 'pagando')
-                        $clase = 'mesa-pagando';
-                    elseif ($mesa['estado'] === 'combinada')
-                        $clase = 'mesa-combinada';
+                        // Clases para la tarjeta según estado
+                        $clase = 'mesa-libre';
+                        if ($mesa['estado'] === 'reservado')
+                            $clase = 'mesa-reservado';
+                        elseif ($mesa['estado'] === 'esperando')
+                            $clase = 'mesa-esperando';
+                        elseif ($mesa['estado'] === 'pagando')
+                            $clase = 'mesa-pagando';
+                        elseif ($mesa['estado'] === 'combinada')
+                            $clase = 'mesa-combinada';
 
-                    $nombre = htmlspecialchars($mesa['nombre']);
-                    $esCombinada = strpos($nombre, '|') !== false;
-                    ?>
-                    <div class="col-6 col-sm-4 col-md-3">
-                        <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" 
-                             data-id="<?= $mesa['id'] ?>"
-                             data-mesa="<?= $mesa['nombre'] ?>"
-                             data-estado="<?= $mesa['estado'] ?>"
-                             data-combinada="<?= $esCombinada ? 'true' : 'false' ?>">
-                            <div class="card-body d-flex flex-column align-items-center justify-content-center py-4 position-relative">
-                                <?php
-                                if ($esCombinada) {
-                                    // Mostrar como M1 + M2
-                                    $partes = explode('|', $nombre);
-                                    $mesasCombinadas = trim($partes[0]) . ' + ' . trim($partes[1]);
-                                    echo "<span class='mesa-nombre-combinado'>{$mesasCombinadas}</span>";
-                                } else {
-                                    echo "<span class='fw-bold fs-4 mb-2'>{$nombre}</span>";
-                                }
-                                ?>
-                                <span class="badge bg-<?= $badgeColor ?> mb-2"><?= ucfirst($mesa['estado']) ?></span>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-secondary btn-sm btn-cambiar-estado"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalCambiarEstado"
-                                        data-id="<?= $mesa['id'] ?>"
-                                        data-nombre="<?= $mesa['nombre'] ?>"
-                                        data-estado="<?= $mesa['estado'] ?>">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm btn-eliminar-mesa"
-                                        data-id="<?= $mesa['id'] ?>"
-                                        data-nombre="<?= $mesa['nombre'] ?>"
-                                        title="Eliminar mesa">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                        $nombre = htmlspecialchars($mesa['nombre']);
+                        $esCombinada = strpos($nombre, '|') !== false;
+                        ?>
+                        <div class="col-6 col-sm-4 col-md-3">
+                            <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" 
+                                 data-id="<?= $mesa['id'] ?>"
+                                 data-mesa="<?= $mesa['nombre'] ?>"
+                                 data-estado="<?= $mesa['estado'] ?>"
+                                 data-combinada="<?= $esCombinada ? 'true' : 'false' ?>">
+                                <div class="card-body d-flex flex-column align-items-center justify-content-center py-4 position-relative">
+                                    <?php
+                                    if ($esCombinada) {
+                                        // Mostrar como M1 + M2
+                                        $partes = explode('|', $nombre);
+                                        $mesasCombinadas = trim($partes[0]) . ' + ' . trim($partes[1]);
+                                        echo "<span class='mesa-nombre-combinado'>{$mesasCombinadas}</span>";
+                                    } else {
+                                        echo "<span class='fw-bold fs-4 mb-2'>{$nombre}</span>";
+                                    }
+                                    ?>
+                                    <span class="badge bg-<?= $badgeColor ?> mb-2"><?= ucfirst($mesa['estado']) ?></span>
+                                    
+                                    <?php if ($mesa['estado'] === 'esperando' && isset($mesa['tiempo_comanda'])): ?>
+                                        <span class="tiempo-comanda" data-minutos="<?= $mesa['tiempo_comanda'] ?>">
+                                            ⏱ <?= $mesa['tiempo_comanda'] ?> min
+                                        </span>
+                                    <?php endif; ?>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-outline-secondary btn-sm btn-cambiar-estado"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalCambiarEstado"
+                                            data-id="<?= $mesa['id'] ?>"
+                                            data-nombre="<?= $mesa['nombre'] ?>"
+                                            data-estado="<?= $mesa['estado'] ?>">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm btn-eliminar-mesa"
+                                            data-id="<?= $mesa['id'] ?>"
+                                            data-nombre="<?= $mesa['nombre'] ?>"
+                                            title="Eliminar mesa">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="col-12 text-center">
+                        <p>No hay mesas disponibles.</p>
                     </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
 
             <!-- LEYENDA -->
@@ -272,9 +257,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
         </div>
     </div>
 
+    <!-- Modales -->
     <!-- Modal: Éxito al agregar -->
-    <div class="modal fade" id="modalMesaAgregada" tabindex="-1" aria-labelledby="modalMesaAgregadaLabel"
-        aria-hidden="true">
+    <div class="modal fade" id="modalMesaAgregada" tabindex="-1" aria-labelledby="modalMesaAgregadaLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center">
                 <div class="modal-header bg-success text-white">

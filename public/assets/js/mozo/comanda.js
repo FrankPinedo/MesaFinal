@@ -251,6 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Confirmar envío
     document.getElementById('confirmarEnvio').addEventListener('click', function() {
+        // Deshabilitar botón mientras procesa
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+        
         fetch(`${BASE_URL}/mozo/enviarComanda`, {
             method: 'POST',
             headers: {
@@ -264,26 +268,60 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 mostrarAlerta('Comanda enviada a cocina', 'success');
+                
+                // Redirigir a vista de comanda enviada después de 1.5 segundos
                 setTimeout(() => {
-                    window.location.href = `${BASE_URL}/mozo`;
+                    window.location.href = `${BASE_URL}/mozo/comanda?comanda=${idComanda}`;
                 }, 1500);
             } else {
                 mostrarAlerta(data.message || 'Error al enviar comanda', 'danger');
+                this.disabled = false;
+                this.innerHTML = 'Enviar a cocina';
             }
         })
         .catch(error => {
             console.error('Error:', error);
             mostrarAlerta('Error de conexión', 'danger');
+            this.disabled = false;
+            this.innerHTML = 'Enviar a cocina';
         });
     });
     
     // Botón Salir
     btnSalir.addEventListener('click', function() {
-        if (confirm('¿Deseas salir sin enviar la comanda?')) {
+        // Verificar si hay cambios sin guardar
+        const hayItems = comandaItems.querySelector('tr td[colspan="4"]') === null;
+        
+        if (hayItems) {
+            if (confirm('¿Deseas salir sin enviar la comanda? Los cambios se perderán.')) {
+                window.location.href = `${BASE_URL}/mozo`;
+            }
+        } else {
             window.location.href = `${BASE_URL}/mozo`;
+        }
+    });
+    
+    // Atajos de teclado
+    document.addEventListener('keydown', function(e) {
+        // F5 - Actualizar comanda
+        if (e.key === 'F5') {
+            e.preventDefault();
+            actualizarComanda();
+            mostrarAlerta('Comanda actualizada', 'info');
+        }
+        
+        // ESC - Volver al panel
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (confirm('¿Deseas salir de la comanda?')) {
+                window.location.href = `${BASE_URL}/mozo`;
+            }
         }
     });
     
     // Cargar comanda inicial
     actualizarComanda();
+    
+    // Auto-actualizar cada 30 segundos
+    setInterval(actualizarComanda, 30000);
 });

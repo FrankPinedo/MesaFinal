@@ -306,6 +306,8 @@ class ComandaModel
         return $this->conn->insert_id;
     }
 
+    
+
     public function __destruct()
     {
         $this->conn->close();

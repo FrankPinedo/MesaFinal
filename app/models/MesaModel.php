@@ -117,6 +117,8 @@ class MesaModel
         $stmt = $this->db->prepare("UPDATE mesas SET estado = ? WHERE id = ?");
         $stmt->execute([$nuevoEstado, $id]);
     }
+
+    
     // Agregar este método que falta:
     public function obtenerMesaPorId($id)
     {

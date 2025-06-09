@@ -154,10 +154,47 @@ document.addEventListener("DOMContentLoaded", function () {
         location.reload();
     });
     
-    // Manejar clic en botón Delivery
+    // Manejar clic en botón Delivery - CORREGIDO
     btnDelivery.addEventListener('click', function() {
-        // Crear una comanda tipo delivery sin mesa
+        // Opción 1: Ir directamente a la vista de comanda delivery sin crear previamente
         window.location.href = `${BASE_URL}/mozo/comanda?tipo=delivery`;
+        
+        /* Opción 2: Si prefieres crear la comanda primero (descomentar si es necesario)
+        // Mostrar mensaje de procesando
+        const btn = this;
+        btn.disabled = true;
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creando...';
+        
+        // Crear comanda delivery a través del servidor
+        fetch(`${BASE_URL}/mozo/crearComandaDelivery`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Redirigir a la vista de comanda delivery
+                window.location.href = `${BASE_URL}/mozo/comanda?tipo=delivery&comanda=${data.comandaId}`;
+            } else {
+                alert('Error al crear pedido delivery: ' + (data.message || 'Error desconocido'));
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Intentar ir directamente sin crear comanda previa
+            window.location.href = `${BASE_URL}/mozo/comanda?tipo=delivery`;
+        });
+        */
     });
     
     // Función para limpiar selección
@@ -189,6 +226,28 @@ document.addEventListener("DOMContentLoaded", function () {
             modal.show();
         }
     });
+    
+    // Actualizar información de tiempo en mesas con comandas activas
+    function actualizarTiempoMesas() {
+        document.querySelectorAll('.mesa-card[data-estado="esperando"]').forEach(mesa => {
+            const tiempoElem = mesa.querySelector('.tiempo-comanda');
+            if (tiempoElem) {
+                const minutos = parseInt(tiempoElem.dataset.minutos) + 1;
+                tiempoElem.dataset.minutos = minutos;
+                tiempoElem.textContent = `⏱ ${minutos} min`;
+                
+                // Cambiar color según el tiempo
+                if (minutos > 30) {
+                    tiempoElem.classList.add('text-danger');
+                } else if (minutos > 15) {
+                    tiempoElem.classList.add('text-warning');
+                }
+            }
+        });
+    }
+    
+    // Actualizar tiempo cada minuto
+    setInterval(actualizarTiempoMesas, 60000);
     
     // Inicializar estado de botones
     actualizarBotones();

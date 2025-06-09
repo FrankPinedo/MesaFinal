@@ -32,6 +32,17 @@ class MozoController
     {
         $usuario = $this->usuario;
         $mesas = $this->mesaModel->obtenerMesas();
+        
+        // Agregar información de comandas activas a cada mesa
+        foreach ($mesas as &$mesa) {
+            if ($mesa['estado'] === 'esperando') {
+                $comandaActiva = $this->comandaModel->obtenerComandaActivaPorMesa($mesa['id']);
+                if ($comandaActiva) {
+                    $mesa['tiempo_comanda'] = $this->comandaModel->obtenerTiempoComanda($comandaActiva['id']);
+                }
+            }
+        }
+        
         require_once __DIR__ . '/../views/mozo/inicio.php';
     }
 
@@ -39,6 +50,20 @@ class MozoController
     {
         // Verificar si es un pedido delivery
         $tipoComanda = isset($_GET['tipo']) ? $_GET['tipo'] : 'comedor';
+        $comandaId = isset($_GET['comanda']) ? $_GET['comanda'] : null;
+        
+        // Si se especifica una comanda existente
+        if ($comandaId) {
+            $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
+            
+            // Verificar si la comanda ya fue enviada
+            if ($comanda && $comanda['estado'] !== 'nueva') {
+                // Mostrar vista de comanda enviada
+                $usuario = $this->usuario;
+                require_once __DIR__ . '/../views/mozo/comanda_enviada.php';
+                return;
+            }
+        }
         
         // Si no hay mesa ID y no es delivery, intentar obtenerlo de GET
         if (!$mesaId && $tipoComanda !== 'delivery' && isset($_GET['mesa'])) {
@@ -55,17 +80,20 @@ class MozoController
         
         // Manejar pedidos delivery
         if ($tipoComanda === 'delivery') {
-            $mesa = ['nombre' => 'Delivery/Para Llevar'];
+            $mesa = 'Delivery/Para Llevar';
             $mesaId = null; // No hay mesa asociada
             
-            // Crear nueva comanda para delivery
-            $comandaId = $this->comandaModel->crearComandaDelivery($usuario['id_user']);
-            $comanda = ['id' => $comandaId, 'total' => 0];
+            // Si no hay comanda especificada, crear nueva
+            if (!$comandaId) {
+                $comandaId = $this->comandaModel->crearComandaDelivery($usuario['id_user']);
+            }
+            
+            $comanda = ['id' => $comandaId, 'estado' => 'nueva'];
             $detalles = [];
         } else {
             // Obtener información de la mesa para pedidos normales
-            $mesa = $this->mesaModel->obtenerMesaPorId($mesaId);
-            if (!$mesa) {
+            $mesaInfo = $this->mesaModel->obtenerMesaPorId($mesaId);
+            if (!$mesaInfo) {
                 header("Location: " . BASE_URL . "/mozo");
                 exit();
             }
@@ -75,7 +103,7 @@ class MozoController
             if (!$comanda) {
                 // Crear nueva comanda
                 $comandaId = $this->comandaModel->crearComanda($mesaId, $usuario['id_user']);
-                $comanda = ['id' => $comandaId, 'total' => 0];
+                $comanda = ['id' => $comandaId, 'estado' => 'nueva'];
                 $detalles = [];
             } else {
                 // Obtener detalles de comanda existente
@@ -83,7 +111,7 @@ class MozoController
             }
             
             // Usar el nombre de la mesa
-            $mesa = $mesa['nombre'];
+            $mesa = $mesaInfo['nombre'];
         }
 
         // Obtener productos disponibles por tipo
@@ -93,8 +121,10 @@ class MozoController
 
         // Calcular total
         $total = 0;
-        foreach ($detalles as $detalle) {
-            $total += $detalle['precio'] * $detalle['cantidad'];
+        if (!empty($detalles)) {
+            foreach ($detalles as $detalle) {
+                $total += $detalle['precio'] * $detalle['cantidad'];
+            }
         }
 
         require_once __DIR__ . '/../views/mozo/comanda.php';
@@ -226,9 +256,32 @@ class MozoController
 
         // Cambiar estado de comanda de 'nueva' a 'pendiente' (para cocina)
         if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'pendiente')) {
-            echo json_encode(['success' => true, 'message' => 'Comanda enviada a cocina']);
+            // Obtener información de la comanda para actualizar la mesa si aplica
+            $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
+            if ($comanda && $comanda['mesa_id']) {
+                // Actualizar estado de la mesa a 'esperando'
+                $this->mesaModel->cambiarEstado($comanda['mesa_id'], 'esperando');
+            }
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Comanda enviada a cocina',
+                'comandaId' => $comandaId
+            ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Error al enviar comanda']);
+        }
+    }
+
+    public function crearComandaDelivery()
+    {
+        header('Content-Type: application/json');
+        
+        try {
+            $comandaId = $this->comandaModel->crearComandaDelivery($this->usuario['id_user']);
+            echo json_encode(['success' => true, 'comandaId' => $comandaId]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     }
 
