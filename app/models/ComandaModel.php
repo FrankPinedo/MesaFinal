@@ -306,7 +306,18 @@ class ComandaModel
         return $this->conn->insert_id;
     }
 
-    
+    public function obtenerComandaPorId($comandaId)
+{
+    $sql = "SELECT c.*, m.nombre as mesa_nombre 
+            FROM comanda c
+            LEFT JOIN mesas m ON c.mesa_id = m.id
+            WHERE c.id = ?";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bind_param("i", $comandaId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_assoc();
+}
 
     public function __destruct()
     {
