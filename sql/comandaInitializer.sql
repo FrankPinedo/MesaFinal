@@ -94,10 +94,14 @@ CREATE TABLE
 CREATE TABLE
     comanda (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        estado VARCHAR(20) DEFAULT 'pendiente',
+        mesa_id INT DEFAULT NULL,
+        usuario_id INT,
+        estado ENUM('nueva', 'pendiente', 'recibido', 'listo', 'cancelado') DEFAULT 'nueva',
         tipo_entrega_id INT,
         fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        extensiones INT DEFAULT (0),
+        extensiones INT DEFAULT 0,
+        FOREIGN KEY (mesa_id) REFERENCES mesas(id) ON DELETE SET NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuario(id_user),
         FOREIGN KEY (tipo_entrega_id) REFERENCES tipo_entrega (id)
     );
 
@@ -109,7 +113,7 @@ CREATE TABLE
         cantidad INT NOT NULL,
         comentario TEXT,
         cancelado TINYINT(1) DEFAULT 0,
-        FOREIGN KEY (comanda_id) REFERENCES comanda (id),
+        FOREIGN KEY (comanda_id) REFERENCES comanda (id) ON DELETE CASCADE,
         FOREIGN KEY (producto_id) REFERENCES producto (id)
     );
 
@@ -118,7 +122,7 @@ CREATE TABLE
         id INT AUTO_INCREMENT PRIMARY KEY,
         detalle_comanda_id INT,
         guarnicion_id INT,
-        FOREIGN KEY (detalle_comanda_id) REFERENCES detalle_comanda (id),
+        FOREIGN KEY (detalle_comanda_id) REFERENCES detalle_comanda (id) ON DELETE CASCADE,
         FOREIGN KEY (guarnicion_id) REFERENCES guarnicion (id)
     );
 
@@ -127,7 +131,7 @@ CREATE TABLE
         id INT AUTO_INCREMENT PRIMARY KEY,
         detalle_comanda_id INT,
         producto_id INT,
-        FOREIGN KEY (detalle_comanda_id) REFERENCES detalle_comanda (id),
+        FOREIGN KEY (detalle_comanda_id) REFERENCES detalle_comanda (id) ON DELETE CASCADE,
         FOREIGN KEY (producto_id) REFERENCES producto (id)
     );
 
@@ -443,7 +447,7 @@ VALUES
     (2, 3),
     (2, 5);
 
--- Datos: Combo familiar Producto ID: 4
+-- Datos: Combo familiar Producto ID: 14
 INSERT INTO
     combo_componentes (
         combo_id,
@@ -453,31 +457,11 @@ INSERT INTO
         grupo
     )
 VALUES
-    (14, 2, 1, 2, 'platos principales');
-
-INSERT INTO
-    combo_componentes (
-        combo_id,
-        producto_id,
-        obligatorio,
-        cantidad,
-        grupo
-    )
-VALUES
-    (14, 6, 1, 2, 'bebidas');
-
-INSERT INTO
-    combo_componentes (
-        combo_id,
-        producto_id,
-        obligatorio,
-        cantidad,
-        grupo
-    )
-VALUES
+    (14, 2, 1, 2, 'platos principales'),
+    (14, 6, 1, 2, 'bebidas'),
     (14, 8, 0, 2, 'bebidas');
 
--- Datos: Combo familiar Producto ID: 21
+-- Datos: Combo Menú Diario Producto ID: 21
 INSERT INTO
     combo_componentes (
         combo_id,
@@ -487,90 +471,6 @@ INSERT INTO
         grupo
     )
 VALUES
-    (21, 10, 1, 1, 'fondo');
-
-INSERT INTO
-    combo_componentes (
-        combo_id,
-        producto_id,
-        obligatorio,
-        cantidad,
-        grupo
-    )
-VALUES
-    (21, 4, 1, 1, 'entrada');
-
-INSERT INTO
-    combo_componentes (
-        combo_id,
-        producto_id,
-        obligatorio,
-        cantidad,
-        grupo
-    )
-VALUES
+    (21, 10, 1, 1, 'fondo'),
+    (21, 4, 1, 1, 'entrada'),
     (21, 15, 1, 1, 'bebida');
-
--- 1. Registrar la comanda (ej: cliente pidió en comedor)
-INSERT INTO
-    comanda (tipo_entrega_id, estado)
-VALUES
-    (3, 'pendiente');
-
-INSERT INTO
-    detalle_comanda (comanda_id, producto_id, cantidad, comentario)
-VALUES
-    (1, 10, 1, 'Sin cebolla, por favor'),
-    (1, 21, 1, 'Combo con jugo');
-
-INSERT INTO
-    detalle_comanda_guarnicion (detalle_comanda_id, guarnicion_id)
-VALUES
-    (1, 1),
-    (1, 3);
-
-INSERT INTO
-    detalle_comanda_combo_opciones (detalle_comanda_id, producto_id)
-VALUES
-    (2, 10),
-    (2, 4),
-    (2, 15);
-
--- Comanda 2
-INSERT INTO
-    comanda (id, tipo_entrega_id)
-VALUES
-    (2, 2);
-
--- Detalles comanda 2
-INSERT INTO
-    detalle_comanda (id, comanda_id, producto_id, cantidad, comentario)
-VALUES
-    (4, 2, 3, 1, 'Sin picante'),
-    (5, 2, 6, 1, ''),
-    (6, 2, 20, 1, '');
-
--- Guarniciones de sudado de pescado
-INSERT INTO
-    detalle_comanda_guarnicion (detalle_comanda_id, guarnicion_id)
-VALUES
-    (4, 4);
-
-
-
--- Agregar columnas faltantes a la tabla comanda
-ALTER TABLE comanda 
-ADD COLUMN IF NOT EXISTS mesa_id INT,
-ADD COLUMN IF NOT EXISTS usuario_id INT,
-ADD FOREIGN KEY (mesa_id) REFERENCES mesas(id),
-ADD FOREIGN KEY (usuario_id) REFERENCES usuario(id_user);
-
--- Modificar el enum de estado en la tabla comanda para incluir 'nueva'
-ALTER TABLE comanda 
-MODIFY COLUMN estado ENUM('nueva', 'pendiente', 'recibido', 'listo', 'cancelado') DEFAULT 'nueva';
-
--- Actualizar las comandas existentes que estén en 'pendiente' sin items
-UPDATE comanda c
-LEFT JOIN detalle_comanda dc ON c.id = dc.comanda_id
-SET c.estado = 'nueva'
-WHERE c.estado = 'pendiente' AND dc.id IS NULL;

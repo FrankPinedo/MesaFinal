@@ -295,6 +295,16 @@ class ComandaModel
         $data = $result->fetch_assoc();
         return $data ? $data['minutos'] : 0;
     }
+        public function crearComandaDelivery($usuarioId)
+    {
+        // Crear comanda sin mesa asociada, con tipo de entrega "para llevar" (id=2)
+        $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
+                VALUES (NULL, ?, 'nueva', 2, NOW())";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $usuarioId);
+        $stmt->execute();
+        return $this->conn->insert_id;
+    }
 
     public function __destruct()
     {

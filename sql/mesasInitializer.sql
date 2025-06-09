@@ -4,12 +4,13 @@ CREATE TABLE IF NOT EXISTS mesas (
     estado ENUM('libre', 'reservado', 'esperando', 'pagando', 'combinada') NOT NULL DEFAULT 'libre'
 );
 
--- Datos de ejemplo
+-- Datos de ejemplo sin C1
 INSERT INTO mesas (nombre, estado) VALUES
-('M1', 'reservado'),
-('M2', 'esperando'),
-('M3', 'pagando'),
+('M1', 'libre'),
+('M2', 'libre'),
+('M3', 'libre'),
 ('M4', 'libre'),
 ('M5', 'libre'),
-('C1', 'combinada'), 
+('M6', 'libre'),
+('M7', 'libre'),
 ('M8', 'libre');

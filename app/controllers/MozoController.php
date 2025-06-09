@@ -37,35 +37,53 @@ class MozoController
 
     public function comanda($mesaId = null)
     {
-        // Si no hay mesa ID, intentar obtenerlo de GET
-        if (!$mesaId && isset($_GET['mesa'])) {
+        // Verificar si es un pedido delivery
+        $tipoComanda = isset($_GET['tipo']) ? $_GET['tipo'] : 'comedor';
+        
+        // Si no hay mesa ID y no es delivery, intentar obtenerlo de GET
+        if (!$mesaId && $tipoComanda !== 'delivery' && isset($_GET['mesa'])) {
             $mesaId = $_GET['mesa'];
         }
 
-        if (!$mesaId) {
+        // Para pedidos normales, verificar que haya mesa
+        if ($tipoComanda !== 'delivery' && !$mesaId) {
             header("Location: " . BASE_URL . "/mozo");
             exit();
         }
 
         $usuario = $this->usuario;
-
-        // Obtener información de la mesa
-        $mesa = $this->mesaModel->obtenerMesaPorId($mesaId);
-        if (!$mesa) {
-            header("Location: " . BASE_URL . "/mozo");
-            exit();
-        }
-
-        // Verificar si hay comanda activa para esta mesa
-        $comanda = $this->comandaModel->obtenerComandaActivaPorMesa($mesaId);
-        if (!$comanda) {
-            // Crear nueva comanda
-            $comandaId = $this->comandaModel->crearComanda($mesaId, $usuario['id_user']);
+        
+        // Manejar pedidos delivery
+        if ($tipoComanda === 'delivery') {
+            $mesa = ['nombre' => 'Delivery/Para Llevar'];
+            $mesaId = null; // No hay mesa asociada
+            
+            // Crear nueva comanda para delivery
+            $comandaId = $this->comandaModel->crearComandaDelivery($usuario['id_user']);
             $comanda = ['id' => $comandaId, 'total' => 0];
             $detalles = [];
         } else {
-            // Obtener detalles de comanda existente
-            $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comanda['id']);
+            // Obtener información de la mesa para pedidos normales
+            $mesa = $this->mesaModel->obtenerMesaPorId($mesaId);
+            if (!$mesa) {
+                header("Location: " . BASE_URL . "/mozo");
+                exit();
+            }
+
+            // Verificar si hay comanda activa para esta mesa
+            $comanda = $this->comandaModel->obtenerComandaActivaPorMesa($mesaId);
+            if (!$comanda) {
+                // Crear nueva comanda
+                $comandaId = $this->comandaModel->crearComanda($mesaId, $usuario['id_user']);
+                $comanda = ['id' => $comandaId, 'total' => 0];
+                $detalles = [];
+            } else {
+                // Obtener detalles de comanda existente
+                $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comanda['id']);
+            }
+            
+            // Usar el nombre de la mesa
+            $mesa = $mesa['nombre'];
         }
 
         // Obtener productos disponibles por tipo
@@ -78,9 +96,6 @@ class MozoController
         foreach ($detalles as $detalle) {
             $total += $detalle['precio'] * $detalle['cantidad'];
         }
-
-        // Pasar el nombre de la mesa a la vista
-        $mesa = $mesa['nombre'];
 
         require_once __DIR__ . '/../views/mozo/comanda.php';
     }

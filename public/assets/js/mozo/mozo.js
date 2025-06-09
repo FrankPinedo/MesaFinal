@@ -3,14 +3,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const formAgregarMesa = document.getElementById("formAgregarMesa");
   const btnQuitarMesa = document.getElementById("btnQuitarMesa");
   const mensajeEliminar = document.getElementById("mensajeEliminarMesa");
-  const btnJuntar = document.getElementById("btnJuntarMesas");
-  const mensajeJuntar = document.getElementById("mensajeJuntarMesas");
-  const btnSeparar = document.getElementById("btnSepararMesas");
-  const mensajeSeparar = document.getElementById("mensajeSepararMesas");
 
   let modoEliminarActivo = false;
-  let modoSeparar = false;
-  let seleccionadasParaJuntar = [];
 
   // ✅ Agregar mesa
   if (btnAgregarMesa && formAgregarMesa) {
@@ -23,15 +17,16 @@ document.addEventListener("DOMContentLoaded", function () {
   if (btnQuitarMesa) {
     btnQuitarMesa.addEventListener("click", function () {
       modoEliminarActivo = !modoEliminarActivo;
-      modoSeparar = false;
-      mensajeSeparar.classList.add("d-none");
-      document.querySelectorAll(".mesa-btn").forEach((mesa) => {
+      document.querySelectorAll(".mesa-card").forEach((mesa) => {
         mesa.classList.toggle("modo-eliminar", modoEliminarActivo);
       });
 
       if (modoEliminarActivo) {
         mensajeEliminar.classList.remove("d-none");
-        mensajeJuntar.classList.add("d-none");
+        // Ocultar otros mensajes
+        document.getElementById("mensajeJuntarMesas").classList.add("d-none");
+        document.getElementById("mensajeSepararMesas").classList.add("d-none");
+        document.getElementById("mensajeSeleccionMultiple").classList.add("d-none");
       } else {
         mensajeEliminar.classList.add("d-none");
       }
@@ -39,11 +34,16 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ✅ Eliminar mesa al hacer clic en modo eliminación
-  document.querySelectorAll(".mesa-btn").forEach((mesa) => {
-    mesa.addEventListener("click", function () {
-      if (modoEliminarActivo) {
-        const id = mesa.dataset.id;
-        const nombre = mesa.dataset.mesa;
+  document.querySelectorAll(".mesa-card").forEach((mesa) => {
+    mesa.addEventListener("click", function (e) {
+      // Evitar el comportamiento si se hace clic en botones internos
+      if (e.target.closest('.btn')) {
+        return;
+      }
+      
+      if (modoEliminarActivo && this.classList.contains("modo-eliminar")) {
+        const id = this.dataset.id;
+        const nombre = this.dataset.mesa;
         document.getElementById("mesaAEliminarId").value = id;
         document.getElementById("mesaAEliminarNombre").textContent = nombre;
 
@@ -52,32 +52,12 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         modal.show();
 
+        // Desactivar modo eliminar después de mostrar el modal
         mensajeEliminar.classList.add("d-none");
         modoEliminarActivo = false;
         document
-          .querySelectorAll(".mesa-btn")
+          .querySelectorAll(".mesa-card")
           .forEach((m) => m.classList.remove("modo-eliminar"));
-      }
-
-      // ✅ Separar mesa combinada
-      if (modoSeparar) {
-        const mesaNombre = mesa.dataset.mesa;
-        const estado = mesa.dataset.estado;
-        if (estado === "combinada" || mesaNombre.includes("|")) {
-          const form = document.createElement("form");
-          form.method = "POST";
-          form.style.display = "none";
-
-          const input = document.createElement("input");
-          input.name = "separar_mesa_nombre";
-          input.value = mesaNombre;
-
-          form.appendChild(input);
-          document.body.appendChild(form);
-          form.submit();
-        } else {
-          alert("Solo puedes separar mesas combinadas.");
-        }
       }
     });
   });
@@ -95,107 +75,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // ✅ Juntar mesas
-  if (btnJuntar) {
-    btnJuntar.addEventListener("click", () => {
-      const mesasLibres = [...document.querySelectorAll(".mesa-btn")].filter(
-        (m) => m.dataset.estado === "libre"
-      );
-
-      if (mesasLibres.length < 2) {
-        alert("Se requieren al menos 2 mesas libres para juntarlas.");
-        return;
-      }
-
-      mensajeJuntar.classList.remove("d-none");
-      mensajeEliminar.classList.add("d-none");
-      mensajeSeparar.classList.add("d-none");
-
-      seleccionadasParaJuntar = [];
-      mesasLibres.forEach((m) => {
-        m.classList.add("seleccionable");
-        m.addEventListener("click", seleccionarMesaParaJuntar);
-      });
-    });
-  }
-
-  function seleccionarMesaParaJuntar(e) {
-    const mesa = e.currentTarget;
-
-    if (seleccionadasParaJuntar.includes(mesa)) {
-      mesa.classList.remove("seleccionada");
-      seleccionadasParaJuntar = seleccionadasParaJuntar.filter(
-        (m) => m !== mesa
-      );
-      return;
-    }
-
-    if (seleccionadasParaJuntar.length < 2) {
-      mesa.classList.add("seleccionada");
-      seleccionadasParaJuntar.push(mesa);
-    }
-
-    if (seleccionadasParaJuntar.length === 2) {
-      mensajeJuntar.classList.add("d-none");
-      document.getElementById("mesa1Id").value =
-        seleccionadasParaJuntar[0].dataset.id;
-      document.getElementById("mesa2Id").value =
-        seleccionadasParaJuntar[1].dataset.id;
-      document.getElementById("mesa1Nombre").textContent =
-        seleccionadasParaJuntar[0].dataset.mesa;
-      document.getElementById("mesa2Nombre").textContent =
-        seleccionadasParaJuntar[1].dataset.mesa;
-
-      const modal = new bootstrap.Modal(
-        document.getElementById("modalJuntarMesas")
-      );
-      modal.show();
-
-      seleccionadasParaJuntar.forEach((m) => {
-        m.classList.remove("seleccionable");
-        m.classList.remove("seleccionada");
-      });
-    }
-  }
-
-  // ✅ Separar mesas (activar modo)
-  if (btnSeparar) {
-    btnSeparar.addEventListener("click", () => {
-      modoSeparar = !modoSeparar;
-      modoEliminarActivo = false;
-      mensajeEliminar.classList.add("d-none");
-      mensajeJuntar.classList.add("d-none");
-
-      if (modoSeparar) {
-        mensajeSeparar.classList.remove("d-none");
-
-        document.querySelectorAll(".mesa-btn").forEach((mesa) => {
-          const nombre = mesa.dataset.mesa;
-          if (nombre.includes("|")) {
-            mesa.classList.add("modo-separar");
-          }
-        });
-      } else {
-        mensajeSeparar.classList.add("d-none");
-
-        document.querySelectorAll(".mesa-btn").forEach((mesa) => {
-          mesa.classList.remove("modo-separar");
-        });
-      }
-    });
-  }
-
-  // ✅ Cambiar estado desde ícono
+  // ✅ Cambiar estado desde botón
   document.querySelectorAll(".btn-cambiar-estado").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const nombre = btn.dataset.nombre;
-      const estado = btn.dataset.estado;
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation(); // Evitar que se propague al click de la mesa
+      const id = this.dataset.id;
+      const nombre = this.dataset.nombre;
+      const estado = this.dataset.estado;
 
       document.getElementById("cambiarEstadoId").value = id;
       document.getElementById(
         "nombreMesaCambio"
       ).textContent = `Mesa: ${nombre}`;
+      
+      // Preseleccionar el estado actual
+      const selectEstado = document.querySelector('#modalCambiarEstado select[name="nuevo_estado"]');
+      if (selectEstado) {
+        selectEstado.value = estado;
+      }
     });
   });
 });

@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MesaLista - Comanda Mesa <?= htmlspecialchars($mesa) ?></title>
+    <title>MesaLista - Comanda <?= htmlspecialchars($mesa) ?></title>
 
     <!-- Logo -->
     <link rel="icon" href="<?= BASE_URL ?>/public/assets/img/logo_1.png" />
@@ -33,7 +33,13 @@
             <!-- Header con información general y campana -->
             <header class="col-12 bg-dark text-white py-2 d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-0">Mesa <?= htmlspecialchars($mesa) ?></h4>
+                    <h4 class="mb-0">
+                        <?php if ($mesa === 'Delivery/Para Llevar'): ?>
+                            <i class="bi bi-box-seam"></i> Pedido para Llevar
+                        <?php else: ?>
+                            Mesa <?= htmlspecialchars($mesa) ?>
+                        <?php endif; ?>
+                    </h4>
                     <small>Mozo: <?= htmlspecialchars($usuario['nombres'] . ' ' . $usuario['apellidos']) ?></small>
                 </div>
                 <div>
@@ -47,8 +53,14 @@
                     <!-- Sección Comanda (izquierda) -->
                     <div class="col-md-4 p-2 border-end">
                         <div class="card shadow-sm">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="card-title mb-0">COMANDA #<?= $comanda['id'] ?></h5>
+                            <div class="card-header <?= $mesa === 'Delivery/Para Llevar' ? 'bg-warning text-dark' : 'bg-primary text-white' ?>">
+                                <h5 class="card-title mb-0">
+                                    <?php if ($mesa === 'Delivery/Para Llevar'): ?>
+                                        <i class="bi bi-bag-check"></i> COMANDA DELIVERY #<?= $comanda['id'] ?>
+                                    <?php else: ?>
+                                        COMANDA #<?= $comanda['id'] ?>
+                                    <?php endif; ?>
+                                </h5>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive" style="max-height: 70vh;">
@@ -103,7 +115,13 @@
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <button id="btn-salir" class="btn btn-secondary">Salir</button>
-                                        <button id="btn-aceptar" class="btn btn-success">Enviar a Cocina</button>
+                                        <button id="btn-aceptar" class="btn btn-success">
+                                            <?php if ($mesa === 'Delivery/Para Llevar'): ?>
+                                                Procesar Pedido
+                                            <?php else: ?>
+                                                Enviar a Cocina
+                                            <?php endif; ?>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -328,15 +346,32 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="confirmarEnvioModalLabel">Confirmar envío a cocina</h5>
+                    <h5 class="modal-title" id="confirmarEnvioModalLabel">
+                        <?php if ($mesa === 'Delivery/Para Llevar'): ?>
+                            Confirmar pedido para llevar
+                        <?php else: ?>
+                            Confirmar envío a cocina
+                        <?php endif; ?>
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Estás seguro que deseas enviar esta comanda a cocina?</p>
+                    <?php if ($mesa === 'Delivery/Para Llevar'): ?>
+                        <p>¿Estás seguro que deseas procesar este pedido para llevar?</p>
+                        <p class="text-info"><i class="bi bi-info-circle"></i> El pedido será enviado a cocina para su preparación.</p>
+                    <?php else: ?>
+                        <p>¿Estás seguro que deseas enviar esta comanda a cocina?</p>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" id="confirmarEnvio">Enviar a cocina</button>
+                    <button type="button" class="btn btn-success" id="confirmarEnvio">
+                        <?php if ($mesa === 'Delivery/Para Llevar'): ?>
+                            Procesar pedido
+                        <?php else: ?>
+                            Enviar a cocina
+                        <?php endif; ?>
+                    </button>
                 </div>
             </div>
         </div>

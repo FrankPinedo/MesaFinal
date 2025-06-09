@@ -54,6 +54,8 @@ class MesaModel
 
 
 
+  // Reemplazar el método juntarMesas existente en MesaModel.php con este código actualizado
+
     public function juntarMesas($id1, $id2)
     {
         // Obtener los nombres reales de las mesas
@@ -64,11 +66,11 @@ class MesaModel
         $stmt->execute([$id2]);
         $nombre2 = $stmt->fetchColumn();
 
-        // Unir nombres visualmente
+        // Unir nombres visualmente con el símbolo |
         $nuevoNombre = $nombre1 . ' | ' . $nombre2;
 
-        // Actualizar la primera mesa con nuevo nombre y estado
-        $sql1 = "UPDATE mesas SET nombre = ?, estado = 'reservado' WHERE id = ?";
+        // Actualizar la primera mesa con nuevo nombre y estado "combinada"
+        $sql1 = "UPDATE mesas SET nombre = ?, estado = 'combinada' WHERE id = ?";
         $this->db->prepare($sql1)->execute([$nuevoNombre, $id1]);
 
         // Eliminar la segunda mesa

@@ -17,11 +17,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['agregar_mesa'])) {
     $mesaModel->agregarMesa();
     header("Location: " . BASE_URL . "/mozo?mesa_agregada=1");
     exit;
-
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mesa1_id'], $_POST['mesa2_id'])) {
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mesa_ids'])) {
     $mesaModel = new MesaModel();
-    $mesaModel->juntarMesas($_POST['mesa1_id'], $_POST['mesa2_id']);
+    $mesaIds = json_decode($_POST['mesa_ids'], true);
+    
+    if (count($mesaIds) == 2) {
+        $mesaModel->juntarMesas($mesaIds[0], $mesaIds[1]);
+    }
+    
     header("Location: " . BASE_URL . "/mozo");
     exit;
 }
@@ -32,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['separar_mesa_nombre']
     header("Location: " . BASE_URL . "/mozo");
     exit;
 }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], $_POST['nuevo_estado'])) {
     $mesaModel = new MesaModel();
     $mesaModel->cambiarEstado($_POST['cambiar_estado_id'], $_POST['nuevo_estado']);
@@ -54,16 +60,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
-/* ... estilos existentes ... */
-
-/* Mesa seleccionada */
+/* Estilos adicionales para selección múltiple */
 .mesa-card.seleccionada {
     border: 3px solid #0d6efd !important;
     box-shadow: 0 0 20px rgba(13, 110, 253, 0.5) !important;
     transform: scale(1.05);
 }
 
-/* Botón comanda deshabilitado */
+.mesa-card.seleccionada-multiple {
+    border: 3px solid #28a745 !important;
+    box-shadow: 0 0 20px rgba(40, 167, 69, 0.5) !important;
+}
+
 .menu-icon-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -71,6 +79,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
 
 .menu-icon-btn:disabled img {
     filter: grayscale(100%);
+}
+
+.mesa-combinada {
+    background-color: #17a2b8 !important;
+    color: white;
+}
+
+.mesa-nombre-combinado {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+#mensajeSeleccionMultiple {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: auto;
+    padding: 12px 24px;
+    font-weight: bold;
+    font-size: 14px;
 }
 </style>
 
@@ -96,19 +126,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                         </button>
                     </div>
                     <div class="col text-center">
-                        <button class="menu-icon-btn">
+                        <button class="menu-icon-btn" id="btnRecargar">
                             <img src="<?= BASE_URL ?>/public/assets/img/Recargar.png" alt="Recargar">
                             <span>Recargar</span>
                         </button>
                     </div>
                     <div class="col text-center">
-                        <button class="menu-icon-btn">
+                        <button class="menu-icon-btn" id="btnDelivery">
                             <img src="<?= BASE_URL ?>/public/assets/img/Deliviry.png" alt="Delivery">
                             <span>Delivery</span>
                         </button>
                     </div>
                     <div class="col text-center">
-                        <button class="menu-icon-btn" id="btnJuntarMesas">
+                        <button class="menu-icon-btn" id="btnJuntarMesas" disabled>
                             <img src="<?= BASE_URL ?>/public/assets/img/Juntar.png" alt="Juntar Mesas">
                             <span>Juntar Mesas</span>
                         </button>
@@ -127,12 +157,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                         </button>
                     </div>
                     <div class="col text-center">
-                        <button type="button" class="menu-icon-btn" id="btnSepararMesas">
+                        <button type="button" class="menu-icon-btn" id="btnSepararMesas" disabled>
                             <img src="<?= BASE_URL ?>/public/assets/img/Separar.png" alt="Separar Mesas">
                             <span>Separar Mesas</span>
                         </button>
-
-
                     </div>
                 </div>
             </div>
@@ -155,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                 <i class="bi bi-bell-fill fs-3 text-warning"></i>
             </div>
 
-            <!-- 🔴 MENSAJE -->
+            <!-- MENSAJES -->
             <div id="mensajeEliminarMesa" class="alert alert-danger text-center fw-bold d-none mb-3">
                 🔴 Modo eliminación activado: haz clic en una mesa para eliminarla.
             </div>
@@ -165,8 +193,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
             <div id="mensajeSepararMesas" class="alert alert-info text-center fw-bold d-none mb-3">
                 🔵 Modo separar activado: haz clic en una mesa combinada para dividirla en mesas libres.
             </div>
-
-
+            <div id="mensajeSeleccionMultiple" class="alert alert-success text-center fw-bold d-none mb-3">
+                ✅ Selección múltiple activada: Selecciona las mesas que deseas juntar.
+            </div>
 
             <div class="row g-3" id="contenedorMesas">
                 <?php foreach ($mesas as $mesa): ?>
@@ -176,6 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                     if ($mesa['estado'] === 'reservado') $badgeColor = 'warning';
                     elseif ($mesa['estado'] === 'esperando') $badgeColor = 'danger';
                     elseif ($mesa['estado'] === 'pagando') $badgeColor = 'success';
+                    elseif ($mesa['estado'] === 'combinada') $badgeColor = 'info';
 
                     // Clases para la tarjeta según estado
                     $clase = 'mesa-libre';
@@ -189,18 +219,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                         $clase = 'mesa-combinada';
 
                     $nombre = htmlspecialchars($mesa['nombre']);
+                    $esCombinada = strpos($nombre, '|') !== false;
                     ?>
                     <div class="col-6 col-sm-4 col-md-3">
-                        <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" data-id="<?= $mesa['id'] ?>"data-mesa="<?= $mesa['nombre'] ?>"data-estado="<?= $mesa['estado'] ?>">
+                        <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" 
+                             data-id="<?= $mesa['id'] ?>"
+                             data-mesa="<?= $mesa['nombre'] ?>"
+                             data-estado="<?= $mesa['estado'] ?>"
+                             data-combinada="<?= $esCombinada ? 'true' : 'false' ?>">
                             <div class="card-body d-flex flex-column align-items-center justify-content-center py-4 position-relative">
                                 <?php
-                                if ($mesa['estado'] === 'combinada' && strpos($nombre, '|') !== false) {
+                                if ($esCombinada) {
+                                    // Mostrar como M1 + M2
                                     $partes = explode('|', $nombre);
-                                    echo "<div class='mesa-combinada-interna mb-2'>
-                                            <span class='lado-izquierdo'>" . trim($partes[0]) . "</span>
-                                            <div class='divisor-central'></div>
-                                            <span class='lado-derecho'>" . trim($partes[1]) . "</span>
-                                          </div>";
+                                    $mesasCombinadas = trim($partes[0]) . ' + ' . trim($partes[1]);
+                                    echo "<span class='mesa-nombre-combinado'>{$mesasCombinadas}</span>";
                                 } else {
                                     echo "<span class='fw-bold fs-4 mb-2'>{$nombre}</span>";
                                 }
@@ -225,7 +258,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                             </div>
                         </div>
                     </div>
-
                 <?php endforeach; ?>
             </div>
 
@@ -235,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                 <span><span class="badge bg-warning">&nbsp;&nbsp;</span> Reservado</span>
                 <span><span class="badge bg-danger">&nbsp;&nbsp;</span> Esperando</span>
                 <span><span class="badge bg-success">&nbsp;&nbsp;</span> Pagando</span>
+                <span><span class="badge bg-info">&nbsp;&nbsp;</span> Combinada</span>
             </div>
         </div>
     </div>
@@ -278,6 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
         </div>
     </div>
 
+    <!-- Modal: Juntar mesas -->
     <div class="modal fade" id="modalJuntarMesas" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center">
@@ -286,13 +320,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    ¿Deseas juntar la mesa <strong id="mesa1Nombre"></strong> con la mesa <strong
-                        id="mesa2Nombre"></strong>?
+                    ¿Deseas juntar las mesas seleccionadas?
+                    <div id="mesasSeleccionadasInfo" class="mt-2"></div>
                 </div>
                 <div class="modal-footer">
                     <form method="post" id="formJuntarMesas">
-                        <input type="hidden" name="mesa1_id" id="mesa1Id">
-                        <input type="hidden" name="mesa2_id" id="mesa2Id">
+                        <input type="hidden" name="mesa_ids" id="mesaIds">
                         <button type="submit" class="btn btn-primary">Confirmar</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     </form>
@@ -301,6 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
         </div>
     </div>
 
+    <!-- Modal: Cambiar estado -->
     <div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center">
@@ -328,69 +362,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
         </div>
     </div>
 
-
-
     <script src="<?= BASE_URL ?>/public/assets/js/mozo/panel.js"></script>
     <script src="<?= BASE_URL ?>/public/assets/js/mozo/mozo.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-<script>
-    // panel.js o mozo.js
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.btn-eliminar-mesa')) {
-        const btn = e.target.closest('.btn-eliminar-mesa');
-        document.getElementById('mesaAEliminarId').value = btn.dataset.id;
-        document.getElementById('mesaAEliminarNombre').textContent = btn.dataset.nombre;
-        const modal = new bootstrap.Modal(document.getElementById('modalEliminarMesa'));
-        modal.show();
-    }
-});
-</script>
 </html>
-
-<style>
-.mesa-card {
-    transition: box-shadow 0.3s, transform 0.2s;
-}
-.mesa-card:hover {
-    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    transform: translateY(-4px) scale(1.03);
-}
-.mesa-combinada-interna {
-    background: linear-gradient(90deg, #e3f2fd 50%, #fff3cd 50%);
-    border-radius: 10px;
-    border: 2px solid #b6b6b6;
-    padding: 0.5rem 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-.lado-izquierdo, .lado-derecho {
-    font-weight: bold;
-    font-size: 1.1rem;
-    flex: 1;
-    text-align: center;
-}
-.divisor-central {
-    width: 4px;
-    height: 32px;
-    background: #adb5bd;
-    border-radius: 2px;
-    display: inline-block;
-}
-.badge {
-    font-size: 1rem;
-    padding: 0.5em 1.2em;
-    font-weight: 500;
-    color: #fff !important;
-}
-.bg-warning { color: #212529 !important; }
-.animate-mesa {
-    animation: fadeInMesa 0.7s;
-}
-@keyframes fadeInMesa {
-    from { opacity: 0; transform: scale(0.95);}
-    to { opacity: 1; transform: scale(1);}
-}
-</style>
