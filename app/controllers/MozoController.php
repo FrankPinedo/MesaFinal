@@ -61,7 +61,7 @@ class MozoController
         if (!$comanda) {
             // Crear nueva comanda
             $comandaId = $this->comandaModel->crearComanda($mesaId, $usuario['id_user']);
-            $comanda = ['id_comanda' => $comandaId, 'total' => 0];
+            $comanda = ['id' => $comandaId, 'total' => 0];
             $detalles = [];
         } else {
             // Obtener detalles de comanda existente
@@ -79,20 +79,23 @@ class MozoController
             $total += $detalle['precio'] * $detalle['cantidad'];
         }
 
+        // Pasar el nombre de la mesa a la vista
+        $mesa = $mesa['nombre'];
+
         require_once __DIR__ . '/../views/mozo/comanda.php';
     }
 
     public function agregarItem()
     {
         header('Content-Type: application/json');
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false, 'message' => 'Método no permitido']);
             exit();
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         $comandaId = $data['id_comanda'] ?? null;
         $productoId = $data['id_plato'] ?? null;
         $cantidad = $data['cantidad'] ?? 1;
@@ -111,9 +114,9 @@ class MozoController
             }
 
             // Agregar item a la comanda
-            $itemId = $this->comandaModel->agregarItemComanda($comandaId, $productoId, $cantidad, $comentario);
-            
-            if ($itemId) {
+            $result = $this->comandaModel->agregarItemComanda($comandaId, $productoId, $cantidad, $comentario);
+
+            if ($result) {
                 // Actualizar stock
                 $this->productoModel->actualizarStock($productoId, -$cantidad);
                 echo json_encode(['success' => true, 'message' => 'Producto agregado']);
@@ -128,7 +131,7 @@ class MozoController
     public function obtenerComanda($comandaId)
     {
         header('Content-Type: application/json');
-        
+
         $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comandaId);
         echo json_encode(['detalles' => $detalles]);
     }
@@ -136,7 +139,7 @@ class MozoController
     public function actualizarComentario()
     {
         header('Content-Type: application/json');
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false]);
             exit();
@@ -156,7 +159,7 @@ class MozoController
     public function eliminarItem()
     {
         header('Content-Type: application/json');
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false]);
             exit();
@@ -172,7 +175,7 @@ class MozoController
 
         // Obtener info del detalle antes de eliminar
         $detalle = $this->comandaModel->obtenerDetalleComanda($detalleId);
-        
+
         if ($this->comandaModel->eliminarDetalleComanda($detalleId)) {
             // Restaurar stock
             $this->productoModel->actualizarStock($detalle['producto_id'], $detalle['cantidad']);
@@ -185,7 +188,7 @@ class MozoController
     public function enviarComanda()
     {
         header('Content-Type: application/json');
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false]);
             exit();
@@ -199,7 +202,14 @@ class MozoController
             exit();
         }
 
-        // Cambiar estado de comanda a "pendiente" (para cocina)
+        // Verificar que la comanda tenga items
+        $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comandaId);
+        if (empty($detalles)) {
+            echo json_encode(['success' => false, 'message' => 'La comanda no tiene productos']);
+            exit();
+        }
+
+        // Cambiar estado de comanda de 'nueva' a 'pendiente' (para cocina)
         if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'pendiente')) {
             echo json_encode(['success' => true, 'message' => 'Comanda enviada a cocina']);
         } else {

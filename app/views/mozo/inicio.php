@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                     </div>
                 </div>
             </div>
-            <a href="<?= BASE_URL ?>/logout.php"
+            <a href="<?= BASE_URL ?>/mozo/logout"
                 class="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2 mt-4">
                 Salir
             </a>

@@ -11,16 +11,125 @@ class ComandaModel
         }
     }
 
+    // Crear nueva comanda con mesa y usuario
+    // Crear nueva comanda con mesa y usuario
+    public function crearComanda($mesaId, $usuarioId)
+    {
+        // Primero verificar si ya existe una comanda activa para esta mesa
+        $sql = "SELECT id FROM comanda WHERE mesa_id = ? AND estado IN ('nueva', 'pendiente', 'recibido') LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            return $row['id'];
+        }
+
+        // Si no existe, crear nueva comanda con estado 'nueva'
+        $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
+            VALUES (?, ?, 'nueva', 3, NOW())"; // Estado 'nueva' en lugar de 'pendiente'
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $mesaId, $usuarioId);
+        $stmt->execute();
+        return $this->conn->insert_id;
+    }
+
+    // Obtener comanda activa por mesa
+    public function obtenerComandaActivaPorMesa($mesaId)
+    {
+        $sql = "SELECT * FROM comanda 
+            WHERE mesa_id = ? AND estado IN ('nueva', 'pendiente', 'recibido') 
+            ORDER BY fecha DESC LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
+    // Obtener detalles de comanda con información completa
+    public function obtenerDetallesComandaCompletos($comandaId)
+    {
+        $sql = "SELECT dc.id as id_detalle, dc.cantidad, dc.comentario, dc.cancelado,
+                p.id as id_plato, p.nombre, p.precio, p.descripcion
+                FROM detalle_comanda dc
+                JOIN producto p ON dc.producto_id = p.id
+                WHERE dc.comanda_id = ? AND dc.cancelado = 0";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $comandaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $detalles = [];
+        while ($row = $result->fetch_assoc()) {
+            $detalles[] = $row;
+        }
+
+        return $detalles;
+    }
+
+    // Agregar item a la comanda
+    public function agregarItemComanda($comandaId, $productoId, $cantidad, $comentario = '')
+    {
+        $sql = "INSERT INTO detalle_comanda (comanda_id, producto_id, cantidad, comentario, cancelado) 
+                VALUES (?, ?, ?, ?, 0)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("iiis", $comandaId, $productoId, $cantidad, $comentario);
+        return $stmt->execute();
+    }
+
+    // Obtener detalle específico
+    public function obtenerDetalleComanda($detalleId)
+    {
+        $sql = "SELECT * FROM detalle_comanda WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $detalleId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
+    // Actualizar comentario
+    public function actualizarComentarioDetalle($detalleId, $comentario)
+    {
+        $sql = "UPDATE detalle_comanda SET comentario = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("si", $comentario, $detalleId);
+        return $stmt->execute();
+    }
+
+    // Eliminar item de comanda
+    public function eliminarDetalleComanda($detalleId)
+    {
+        $sql = "DELETE FROM detalle_comanda WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $detalleId);
+        return $stmt->execute();
+    }
+
+    // Actualizar estado de comanda
+    public function actualizarEstadoComanda($comandaId, $estado)
+    {
+        $sql = "UPDATE comanda SET estado = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("si", $estado, $comandaId);
+        return $stmt->execute();
+    }
+
+    /* Métodos para cocina */
     /* Obtiene las comandas pendientes con sus detalles */
     public function obtenerComandasPendientes()
     {
-        $sql = "SELECT c.id, c.estado, te.nombre as tipo_entrega, 
-                DATE_FORMAT(c.fecha, '%H:%i') as hora, 
-                TIMESTAMPDIFF(MINUTE, c.fecha, NOW()) as minutos_transcurridos
-                FROM comanda c
-                JOIN tipo_entrega te ON c.tipo_entrega_id = te.id
-                WHERE c.estado IN ('pendiente', 'recibido')
-                ORDER BY c.fecha ASC";
+        $sql = "SELECT c.id, c.estado, c.mesa_id, te.nombre as tipo_entrega, 
+            DATE_FORMAT(c.fecha, '%H:%i') as hora, 
+            TIMESTAMPDIFF(MINUTE, c.fecha, NOW()) as minutos_transcurridos
+            FROM comanda c
+            JOIN tipo_entrega te ON c.tipo_entrega_id = te.id
+            WHERE c.estado IN ('pendiente', 'recibido')  -- No incluir 'nueva'
+            ORDER BY c.fecha ASC";
 
         $result = $this->conn->query($sql);
         if (!$result) {
@@ -38,7 +147,7 @@ class ComandaModel
         return $comandas;
     }
 
-    /* Obtiene los detalles de una comanda específica */
+    /* Obtiene los detalles de una comanda específica para cocina */
     private function obtenerDetallesComanda($comandaId)
     {
         $items = [];
@@ -119,18 +228,6 @@ class ComandaModel
         return $opciones;
     }
 
-    /* Actualiza el estado de una comanda */
-    public function actualizarEstadoComanda($comandaId, $estado)
-    {
-        $sql = "UPDATE comanda SET estado = ? WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt || !$stmt->bind_param("si", $estado, $comandaId) || !$stmt->execute()) {
-            error_log("Error en actualizarEstadoComanda: " . ($stmt ? $stmt->error : $this->conn->error));
-            return false;
-        }
-        return true;
-    }
-
     /* Cancela un item específico de una comanda */
     public function cancelarItem($itemId)
     {
@@ -138,6 +235,18 @@ class ComandaModel
         $stmt = $this->conn->prepare($sql);
         if (!$stmt || !$stmt->bind_param("i", $itemId) || !$stmt->execute()) {
             error_log("Error en cancelarItem: " . ($stmt ? $stmt->error : $this->conn->error));
+            return false;
+        }
+        return true;
+    }
+
+    /* Recupera un item cancelado */
+    public function recuperarItem($itemId)
+    {
+        $sql = "UPDATE detalle_comanda SET cancelado = 0 WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt || !$stmt->bind_param("i", $itemId) || !$stmt->execute()) {
+            error_log("Error en recuperarItem: " . ($stmt ? $stmt->error : $this->conn->error));
             return false;
         }
         return true;
@@ -187,50 +296,8 @@ class ComandaModel
         return $data ? $data['minutos'] : 0;
     }
 
-    public function recuperarItem($itemId)
-    {
-        $sql = "UPDATE detalle_comanda SET cancelado = 0 WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt || !$stmt->bind_param("i", $itemId) || !$stmt->execute()) {
-            error_log("Error en recuperarItem: " . ($stmt ? $stmt->error : $this->conn->error));
-            return false;
-        }
-        return true;
-    }
-
     public function __destruct()
     {
         $this->conn->close();
-    }
-
-    public function crearComanda($mesaId, $usuarioId)
-    {
-        $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
-            VALUES (?, ?, 'pendiente', 3, NOW())"; // 3 = comedor
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ii", $mesaId, $usuarioId);
-        $stmt->execute();
-        return $this->conn->insert_id;
-    }
-
-    public function obtenerComandaActivaPorMesa($mesaId)
-    {
-        $sql = "SELECT * FROM comanda 
-            WHERE mesa_id = ? AND estado IN ('pendiente', 'recibido') 
-            ORDER BY fecha DESC LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $mesaId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_assoc();
-    }
-
-    public function agregarItemComanda($comandaId, $productoId, $cantidad, $comentario = '')
-    {
-        $sql = "INSERT INTO detalle_comanda (comanda_id, producto_id, cantidad, comentario) 
-            VALUES (?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("iiis", $comandaId, $productoId, $cantidad, $comentario);
-        return $stmt->execute();
     }
 }

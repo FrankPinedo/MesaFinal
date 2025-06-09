@@ -556,4 +556,21 @@ INSERT INTO
 VALUES
     (4, 4);
 
-    -- Agregar columnas faltantes a la tabla comanda
+
+
+-- Agregar columnas faltantes a la tabla comanda
+ALTER TABLE comanda 
+ADD COLUMN IF NOT EXISTS mesa_id INT,
+ADD COLUMN IF NOT EXISTS usuario_id INT,
+ADD FOREIGN KEY (mesa_id) REFERENCES mesas(id),
+ADD FOREIGN KEY (usuario_id) REFERENCES usuario(id_user);
+
+-- Modificar el enum de estado en la tabla comanda para incluir 'nueva'
+ALTER TABLE comanda 
+MODIFY COLUMN estado ENUM('nueva', 'pendiente', 'recibido', 'listo', 'cancelado') DEFAULT 'nueva';
+
+-- Actualizar las comandas existentes que estén en 'pendiente' sin items
+UPDATE comanda c
+LEFT JOIN detalle_comanda dc ON c.id = dc.comanda_id
+SET c.estado = 'nueva'
+WHERE c.estado = 'pendiente' AND dc.id IS NULL;

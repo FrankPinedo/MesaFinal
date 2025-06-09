@@ -5,8 +5,9 @@ class MesaModel
 
     public function __construct()
     {
-        try {
-            $this->db = new PDO("mysql:host=localhost;dbname=mesalista", "root", "12345");
+         try {
+            // Usar las constantes de configuración
+            $this->db = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             die("Error de conexión: " . $e->getMessage());

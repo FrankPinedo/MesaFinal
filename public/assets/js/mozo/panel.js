@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     let mesaSeleccionada = null;
+    const BASE_URL = window.location.origin + '/MesaLista';
     const btnComanda = document.getElementById('btnComanda');
     
     // Manejar clic en mesa

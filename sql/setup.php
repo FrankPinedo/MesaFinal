@@ -17,9 +17,10 @@ try {
     $sqlFiles = [
         './userInitializer.sql',
         './empresaInitializer.sql',
+        './mesasInitializer.sql',
         './comandaInitializer.sql',
-        './platosInitializer.sql',
-        './mesasInitializer.sql'
+        './platosInitializer.sql'
+        
     ];
 
     // Crear tablas

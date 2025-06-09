@@ -48,7 +48,7 @@
                     <div class="col-md-4 p-2 border-end">
                         <div class="card shadow-sm">
                             <div class="card-header bg-primary text-white">
-                                <h5 class="card-title mb-0">COMANDA</h5>
+                                <h5 class="card-title mb-0">COMANDA #<?= $comanda['id'] ?></h5>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive" style="max-height: 70vh;">
@@ -103,7 +103,7 @@
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <button id="btn-salir" class="btn btn-secondary">Salir</button>
-                                        <button id="btn-aceptar" class="btn btn-success">Aceptar</button>
+                                        <button id="btn-aceptar" class="btn btn-success">Enviar a Cocina</button>
                                     </div>
                                 </div>
                             </div>
@@ -132,13 +132,13 @@
                                             <?php if (!empty($platos)): ?>
                                                 <?php foreach ($platos as $plato): ?>
                                                     <div class="col">
-                                                        <div class="card h-100 producto-card <?= $plato['estado'] !== 'activo' ? 'disabled bg-light' : '' ?>" 
-                                                             data-id-plato="<?= $plato['id_plato'] ?>" 
+                                                        <div class="card h-100 producto-card <?= $plato['estado'] == 0 || $plato['stock'] <= 0 ? 'disabled bg-light' : '' ?>" 
+                                                             data-id-plato="<?= $plato['id'] ?>" 
                                                              data-precio="<?= $plato['precio'] ?>" 
                                                              data-nombre="<?= htmlspecialchars($plato['nombre']) ?>"
-                                                             data-disponible="<?= $plato['estado'] === 'activo' ? '1' : '0' ?>">
+                                                             data-disponible="<?= $plato['estado'] == 1 && $plato['stock'] > 0 ? '1' : '0' ?>">
                                                             <div class="card-img-top text-center pt-2">
-                                                                <?php if (!empty($plato['imagen'])): ?>
+                                                                <?php if (!empty($plato['imagen']) && $plato['imagen'] != 'sin imagen.jpg'): ?>
                                                                     <img src="<?= BASE_URL ?>/public/uploads/<?= htmlspecialchars($plato['imagen']) ?>" alt="<?= htmlspecialchars($plato['nombre']) ?>" class="img-fluid rounded" style="height: 100px; object-fit: cover;">
                                                                 <?php else: ?>
                                                                     <div class="bg-light p-4 rounded">
@@ -162,8 +162,8 @@
                                                                     <span class="badge <?= $plato['stock'] > 0 ? 'bg-success' : 'bg-danger' ?>">
                                                                         Stock: <?= $plato['stock'] ?>
                                                                     </span>
-                                                                    <?php if ($plato['estado'] === 'activo' && $plato['stock'] > 0): ?>
-                                                                        <button class="btn btn-sm btn-outline-primary comentario-plato-btn" data-id-plato="<?= $plato['id_plato'] ?>">
+                                                                    <?php if ($plato['estado'] == 1 && $plato['stock'] > 0): ?>
+                                                                        <button class="btn btn-sm btn-outline-primary comentario-plato-btn" data-id-plato="<?= $plato['id'] ?>">
                                                                             <i class="bi bi-chat-left-text"></i>
                                                                         </button>
                                                                     <?php endif; ?>
@@ -186,13 +186,13 @@
                                             <?php if (!empty($bebidas)): ?>
                                                 <?php foreach ($bebidas as $bebida): ?>
                                                     <div class="col">
-                                                        <div class="card h-100 producto-card <?= $bebida['estado'] !== 'activo' ? 'disabled bg-light' : '' ?>" 
-                                                             data-id-plato="<?= $bebida['id_plato'] ?>" 
+                                                        <div class="card h-100 producto-card <?= $bebida['estado'] == 0 || $bebida['stock'] <= 0 ? 'disabled bg-light' : '' ?>" 
+                                                             data-id-plato="<?= $bebida['id'] ?>" 
                                                              data-precio="<?= $bebida['precio'] ?>" 
                                                              data-nombre="<?= htmlspecialchars($bebida['nombre']) ?>"
-                                                             data-disponible="<?= $bebida['estado'] === 'activo' ? '1' : '0' ?>">
+                                                             data-disponible="<?= $bebida['estado'] == 1 && $bebida['stock'] > 0 ? '1' : '0' ?>">
                                                             <div class="card-img-top text-center pt-2">
-                                                                <?php if (!empty($bebida['imagen'])): ?>
+                                                                <?php if (!empty($bebida['imagen']) && $bebida['imagen'] != 'sin imagen.jpg'): ?>
                                                                     <img src="<?= BASE_URL ?>/public/uploads/<?= htmlspecialchars($bebida['imagen']) ?>" alt="<?= htmlspecialchars($bebida['nombre']) ?>" class="img-fluid rounded" style="height: 100px; object-fit: cover;">
                                                                 <?php else: ?>
                                                                     <div class="bg-light p-4 rounded">
@@ -216,8 +216,8 @@
                                                                     <span class="badge <?= $bebida['stock'] > 0 ? 'bg-success' : 'bg-danger' ?>">
                                                                         Stock: <?= $bebida['stock'] ?>
                                                                     </span>
-                                                                    <?php if ($bebida['estado'] === 'activo' && $bebida['stock'] > 0): ?>
-                                                                        <button class="btn btn-sm btn-outline-primary comentario-plato-btn" data-id-plato="<?= $bebida['id_plato'] ?>">
+                                                                    <?php if ($bebida['estado'] == 1 && $bebida['stock'] > 0): ?>
+                                                                        <button class="btn btn-sm btn-outline-primary comentario-plato-btn" data-id-plato="<?= $bebida['id'] ?>">
                                                                             <i class="bi bi-chat-left-text"></i>
                                                                         </button>
                                                                     <?php endif; ?>
@@ -240,13 +240,13 @@
                                             <?php if (!empty($combos)): ?>
                                                 <?php foreach ($combos as $combo): ?>
                                                     <div class="col">
-                                                        <div class="card h-100 producto-card <?= $combo['estado'] !== 'activo' ? 'disabled bg-light' : '' ?>" 
-                                                             data-id-plato="<?= $combo['id_plato'] ?>" 
+                                                        <div class="card h-100 producto-card <?= $combo['estado'] == 0 || $combo['stock'] <= 0 ? 'disabled bg-light' : '' ?>" 
+                                                             data-id-plato="<?= $combo['id'] ?>" 
                                                              data-precio="<?= $combo['precio'] ?>" 
                                                              data-nombre="<?= htmlspecialchars($combo['nombre']) ?>"
-                                                             data-disponible="<?= $combo['estado'] === 'activo' ? '1' : '0' ?>">
+                                                             data-disponible="<?= $combo['estado'] == 1 && $combo['stock'] > 0 ? '1' : '0' ?>">
                                                             <div class="card-img-top text-center pt-2">
-                                                                <?php if (!empty($combo['imagen'])): ?>
+                                                                <?php if (!empty($combo['imagen']) && $combo['imagen'] != 'sin imagen.jpg'): ?>
                                                                     <img src="<?= BASE_URL ?>/public/uploads/<?= htmlspecialchars($combo['imagen']) ?>" alt="<?= htmlspecialchars($combo['nombre']) ?>" class="img-fluid rounded" style="height: 100px; object-fit: cover;">
                                                                 <?php else: ?>
                                                                     <div class="bg-light p-4 rounded">
@@ -270,8 +270,8 @@
                                                                     <span class="badge <?= $combo['stock'] > 0 ? 'bg-success' : 'bg-danger' ?>">
                                                                         Stock: <?= $combo['stock'] ?>
                                                                     </span>
-                                                                    <?php if ($combo['estado'] === 'activo' && $combo['stock'] > 0): ?>
-                                                                        <button class="btn btn-sm btn-outline-primary comentario-plato-btn" data-id-plato="<?= $combo['id_plato'] ?>">
+                                                                    <?php if ($combo['estado'] == 1 && $combo['stock'] > 0): ?>
+                                                                        <button class="btn btn-sm btn-outline-primary comentario-plato-btn" data-id-plato="<?= $combo['id'] ?>">
                                                                             <i class="bi bi-chat-left-text"></i>
                                                                         </button>
                                                                     <?php endif; ?>
@@ -342,7 +342,7 @@
         </div>
     </div>
 
-    <input type="hidden" id="id-comanda" value="<?= $comanda['id_comanda'] ?>">
+    <input type="hidden" id="id-comanda" value="<?= $comanda['id'] ?>">
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
     <script src="<?= BASE_URL ?>/public/assets/js/mozo/comanda.js"></script>
