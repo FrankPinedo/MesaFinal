@@ -37,11 +37,11 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Manejar clic en botón Comanda
     btnComanda.addEventListener('click', function() {
-        if (mesaSeleccionada) {
-            // Redirigir a la vista de comanda con el ID de la mesa
-            window.location.href = `${BASE_URL}/mozo/comanda/${mesaSeleccionada.id}`;
-        }
-    });
+    if (mesaSeleccionada) {
+        // Usar la ruta correcta sin el ID en la URL
+        window.location.href = `${BASE_URL}/mozo/comanda?mesa=${mesaSeleccionada.id}`;
+    }
+});
     
     // Deseleccionar mesa al hacer clic fuera
     document.addEventListener('click', function(e) {

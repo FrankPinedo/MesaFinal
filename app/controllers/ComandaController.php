@@ -1,132 +1,75 @@
 <?php
-class ComandaController
+class ComandaModel
 {
-    private $usuario;
-    private $comandaModel;
-    private $productoModel;
+    private $conn;
 
     public function __construct()
     {
-        require_once __DIR__ . '/../../config/config.php';
-        require_once __DIR__ . '/../helpers/sesion.php';
-        require_once __DIR__ . '/../models/ComandaModel.php';
-        require_once __DIR__ . '/../models/ProductoModel.php';
-
-        $this->usuario = verificarSesion();
-        session_regenerate_id(true);
-
-        if ($this->usuario['rol'] !== 'mozo') {
-            require_once __DIR__ . '/../controllers/ErrorController.php';
-            (new ErrorController())->index('403');
-            exit();
+        $this->conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if ($this->conn->connect_error) {
+            die('Conexión fallida: ' . $this->conn->connect_error);
         }
-
-        $this->comandaModel = new ComandaModel();
-        $this->productoModel = new ProductoModel();
     }
 
-    public function index()
+    // Agregar estos métodos que faltan:
+
+    public function obtenerDetallesComandaCompletos($comandaId)
     {
-        $mesaId = $_GET['mesa'] ?? null;
+        $sql = "SELECT dc.id as id_detalle, dc.cantidad, dc.comentario, 
+                p.id as id_plato, p.nombre, p.precio, p.descripcion
+                FROM detalle_comanda dc
+                JOIN producto p ON dc.producto_id = p.id
+                WHERE dc.comanda_id = ? AND dc.cancelado = 0";
         
-        if (!$mesaId) {
-            header("Location: " . BASE_URL . "/mozo");
-            exit();
-        }
-
-        // Obtener información de la mesa
-        $mesa = $this->obtenerMesa($mesaId);
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $comandaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
         
-        // Obtener o crear comanda para esta mesa
-        $comanda = $this->comandaModel->obtenerComandaActivaPorMesa($mesaId);
-        if (!$comanda) {
-            $comandaId = $this->comandaModel->crearComanda($mesaId, $this->usuario['id_user']);
-            $comanda = ['id_comanda' => $comandaId, 'total' => 0];
+        $detalles = [];
+        while ($row = $result->fetch_assoc()) {
+            $detalles[] = $row;
         }
-
-        // Obtener detalles de la comanda
-        $detalles = $this->comandaModel->obtenerDetallesComanda($comanda['id_comanda']);
         
-        // Obtener productos disponibles
-        $platos = $this->productoModel->obtenerProductosPorTipo(2, true); // Solo activos
-        $bebidas = $this->productoModel->obtenerProductosPorTipo(1, true);
-        $combos = $this->productoModel->obtenerProductosPorTipo(4, true);
-        
-        // Calcular total
-        $total = array_sum(array_column($detalles, 'subtotal'));
-
-        $usuario = $this->usuario;
-        require_once __DIR__ . '/../views/mozo/comanda.php';
+        return $detalles;
     }
 
-    public function agregarProducto()
+    public function obtenerDetalleComanda($detalleId)
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $comandaId = $_POST['comanda_id'];
-            $productoId = $_POST['producto_id'];
-            $cantidad = $_POST['cantidad'] ?? 1;
-            $comentario = $_POST['comentario'] ?? '';
-
-            // Verificar stock
-            if ($this->productoModel->verificarStock($productoId, $cantidad)) {
-                $this->comandaModel->agregarDetalle($comandaId, $productoId, $cantidad, $comentario);
-                $this->productoModel->actualizarStock($productoId, -$cantidad);
-                
-                echo json_encode(['success' => true, 'message' => 'Producto agregado']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Stock insuficiente']);
-            }
-            exit();
-        }
+        $sql = "SELECT * FROM detalle_comanda WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $detalleId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
     }
 
-    public function actualizarComentario()
+    public function actualizarComentarioDetalle($detalleId, $comentario)
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $detalleId = $_POST['detalle_id'];
-            $comentario = $_POST['comentario'];
-            
-            $this->comandaModel->actualizarComentarioDetalle($detalleId, $comentario);
-            echo json_encode(['success' => true]);
-            exit();
-        }
+        $sql = "UPDATE detalle_comanda SET comentario = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("si", $comentario, $detalleId);
+        return $stmt->execute();
     }
 
-    public function eliminarProducto()
+    public function eliminarDetalleComanda($detalleId)
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $detalleId = $_POST['detalle_id'];
-            
-            // Obtener info del detalle antes de eliminar
-            $detalle = $this->comandaModel->obtenerDetalle($detalleId);
-            
-            if ($this->comandaModel->eliminarDetalle($detalleId)) {
-                // Restaurar stock
-                $this->productoModel->actualizarStock($detalle['producto_id'], $detalle['cantidad']);
-                echo json_encode(['success' => true]);
-            } else {
-                echo json_encode(['success' => false]);
-            }
-            exit();
-        }
+        $sql = "DELETE FROM detalle_comanda WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $detalleId);
+        return $stmt->execute();
     }
 
-    public function enviarACocina()
+    // Agregar el parámetro mesa_id que falta
+    public function crearComanda($mesaId, $usuarioId)
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $comandaId = $_POST['comanda_id'];
-            
-            // Cambiar estado de comanda a "enviada"
-            $this->comandaModel->actualizarEstadoComanda($comandaId, 'pendiente');
-            
-            echo json_encode(['success' => true, 'message' => 'Comanda enviada a cocina']);
-            exit();
-        }
+        $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
+                VALUES (?, ?, 'nueva', 3, NOW())";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $mesaId, $usuarioId);
+        $stmt->execute();
+        return $this->conn->insert_id;
     }
 
-    private function obtenerMesa($mesaId)
-    {
-        // Aquí deberías obtener la info de la mesa desde el modelo
-        return $mesaId; // Por ahora retornamos solo el ID
-    }
+    // Resto de métodos existentes...
 }

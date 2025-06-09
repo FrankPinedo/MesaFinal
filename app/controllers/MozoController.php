@@ -2,12 +2,17 @@
 class MozoController
 {
     private $usuario;
+    private $mesaModel;
+    private $productoModel;
+    private $comandaModel;
 
     public function __construct()
     {
         require_once __DIR__ . '/../../config/config.php';
         require_once __DIR__ . '/../helpers/sesion.php';
         require_once __DIR__ . '/../models/MesaModel.php';
+        require_once __DIR__ . '/../models/ProductoModel.php';
+        require_once __DIR__ . '/../models/ComandaModel.php';
 
         $this->usuario = verificarSesion();
         session_regenerate_id(true);
@@ -18,56 +23,25 @@ class MozoController
             exit();
         }
 
-        $pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME, DB_USER, DB_PASS);
-
-        // Procesar eliminación de mesa
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['eliminar_mesa_id'])) {
-            $id = intval($_POST['eliminar_mesa_id']);
-            $stmt = $pdo->prepare("DELETE FROM mesas WHERE id = ?");
-            $stmt->execute([$id]);
-            header("Location: " . BASE_URL . "/mozo");
-            exit();
-        }
-
-        // Separar mesa combinada
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['separar_mesa_nombre'])) {
-            $mesaModel = new MesaModel();
-            $mesaModel->separarMesa($_POST['separar_mesa_nombre']);
-            header("Location: " . BASE_URL . "/mozo");
-            exit();
-        }
-
-
-        $stmt = $pdo->query("SELECT id, nombre, estado FROM mesas");
-        $mesas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Ordenar por número extraído del nombre
-        usort($mesas, function ($a, $b) {
-            preg_match('/\d+/', $a['nombre'], $numA);
-            preg_match('/\d+/', $b['nombre'], $numB);
-            return intval($numA[0]) - intval($numB[0]);
-        });
-
-
-
-        $usuario = $this->usuario;
-        require __DIR__ . '/../views/mozo/inicio.php';
+        $this->mesaModel = new MesaModel();
+        $this->productoModel = new ProductoModel();
+        $this->comandaModel = new ComandaModel();
     }
 
     public function index()
     {
+        $usuario = $this->usuario;
+        $mesas = $this->mesaModel->obtenerMesas();
         require_once __DIR__ . '/../views/mozo/inicio.php';
     }
-    public function logout()
-    {
-        session_start();
-        session_unset();
-        session_destroy();
-        header("Location: " . BASE_URL . "/login");
-        exit();
-    }
+
     public function comanda($mesaId = null)
     {
+        // Si no hay mesa ID, intentar obtenerlo de GET
+        if (!$mesaId && isset($_GET['mesa'])) {
+            $mesaId = $_GET['mesa'];
+        }
+
         if (!$mesaId) {
             header("Location: " . BASE_URL . "/mozo");
             exit();
@@ -75,38 +49,29 @@ class MozoController
 
         $usuario = $this->usuario;
 
-        // Cargar modelos necesarios
-        require_once __DIR__ . '/../models/MesaModel.php';
-        require_once __DIR__ . '/../models/ProductoModel.php';
-        require_once __DIR__ . '/../models/ComandaModel.php';
-
-        $mesaModel = new MesaModel();
-        $productoModel = new ProductoModel();
-        $comandaModel = new ComandaModel();
-
         // Obtener información de la mesa
-        $mesa = $mesaModel->obtenerMesaPorId($mesaId);
+        $mesa = $this->mesaModel->obtenerMesaPorId($mesaId);
         if (!$mesa) {
             header("Location: " . BASE_URL . "/mozo");
             exit();
         }
 
         // Verificar si hay comanda activa para esta mesa
-        $comanda = $comandaModel->obtenerComandaActivaPorMesa($mesaId);
+        $comanda = $this->comandaModel->obtenerComandaActivaPorMesa($mesaId);
         if (!$comanda) {
             // Crear nueva comanda
-            $comandaId = $comandaModel->crearComanda($mesaId, $usuario['id_user']);
+            $comandaId = $this->comandaModel->crearComanda($mesaId, $usuario['id_user']);
             $comanda = ['id_comanda' => $comandaId, 'total' => 0];
             $detalles = [];
         } else {
             // Obtener detalles de comanda existente
-            $detalles = $comandaModel->obtenerDetallesComanda($comanda['id_comanda']);
+            $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comanda['id']);
         }
 
-        // Obtener productos disponibles
-        $platos = $productoModel->obtenerProductosDisponiblesPorTipo(2); // tipo plato
-        $bebidas = $productoModel->obtenerProductosDisponiblesPorTipo(1); // tipo bebida
-        $combos = $productoModel->obtenerProductosDisponiblesPorTipo(4); // tipo combo
+        // Obtener productos disponibles por tipo
+        $platos = $this->productoModel->obtenerProductosPorTipo(2, true);
+        $bebidas = $this->productoModel->obtenerProductosPorTipo(1, true);
+        $combos = $this->productoModel->obtenerProductosPorTipo(4, true);
 
         // Calcular total
         $total = 0;
@@ -115,5 +80,139 @@ class MozoController
         }
 
         require_once __DIR__ . '/../views/mozo/comanda.php';
+    }
+
+    public function agregarItem()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit();
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        $comandaId = $data['id_comanda'] ?? null;
+        $productoId = $data['id_plato'] ?? null;
+        $cantidad = $data['cantidad'] ?? 1;
+        $comentario = $data['comentario'] ?? '';
+
+        if (!$comandaId || !$productoId) {
+            echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
+            exit();
+        }
+
+        try {
+            // Verificar stock
+            if (!$this->productoModel->verificarStock($productoId, $cantidad)) {
+                echo json_encode(['success' => false, 'message' => 'Stock insuficiente']);
+                exit();
+            }
+
+            // Agregar item a la comanda
+            $itemId = $this->comandaModel->agregarItemComanda($comandaId, $productoId, $cantidad, $comentario);
+            
+            if ($itemId) {
+                // Actualizar stock
+                $this->productoModel->actualizarStock($productoId, -$cantidad);
+                echo json_encode(['success' => true, 'message' => 'Producto agregado']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Error al agregar producto']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function obtenerComanda($comandaId)
+    {
+        header('Content-Type: application/json');
+        
+        $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comandaId);
+        echo json_encode(['detalles' => $detalles]);
+    }
+
+    public function actualizarComentario()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false]);
+            exit();
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $detalleId = $data['id_detalle'] ?? null;
+        $comentario = $data['comentario'] ?? '';
+
+        if ($detalleId && $this->comandaModel->actualizarComentarioDetalle($detalleId, $comentario)) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
+    }
+
+    public function eliminarItem()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false]);
+            exit();
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $detalleId = $data['id_detalle'] ?? null;
+
+        if (!$detalleId) {
+            echo json_encode(['success' => false]);
+            exit();
+        }
+
+        // Obtener info del detalle antes de eliminar
+        $detalle = $this->comandaModel->obtenerDetalleComanda($detalleId);
+        
+        if ($this->comandaModel->eliminarDetalleComanda($detalleId)) {
+            // Restaurar stock
+            $this->productoModel->actualizarStock($detalle['producto_id'], $detalle['cantidad']);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
+    }
+
+    public function enviarComanda()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false]);
+            exit();
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $comandaId = $data['id_comanda'] ?? null;
+
+        if (!$comandaId) {
+            echo json_encode(['success' => false, 'message' => 'ID de comanda no proporcionado']);
+            exit();
+        }
+
+        // Cambiar estado de comanda a "pendiente" (para cocina)
+        if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'pendiente')) {
+            echo json_encode(['success' => true, 'message' => 'Comanda enviada a cocina']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al enviar comanda']);
+        }
+    }
+
+    public function logout()
+    {
+        session_start();
+        session_unset();
+        session_destroy();
+        header("Location: " . BASE_URL . "/login");
+        exit();
     }
 }

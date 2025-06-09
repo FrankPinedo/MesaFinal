@@ -556,3 +556,4 @@ INSERT INTO
 VALUES
     (4, 4);
 
+    -- Agregar columnas faltantes a la tabla comanda

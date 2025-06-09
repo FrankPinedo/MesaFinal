@@ -240,4 +240,36 @@ class ProductoModel
         $stmt->bindParam(':nombre', $nombre);
         return $stmt->execute();
     }
+
+    // Agregar estos métodos que faltan:
+public function obtenerProductosPorTipo($tipoId, $soloActivos = false)
+{
+    $sql = "SELECT p.*, p.id as id_plato FROM producto p 
+            WHERE p.tipo_producto_id = :tipo";
+    
+    if ($soloActivos) {
+        $sql .= " AND p.estado = 1";
+    }
+    
+    $sql .= " ORDER BY p.nombre";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute(['tipo' => $tipoId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+public function verificarStock($productoId, $cantidad)
+{
+    $stmt = $this->db->prepare("SELECT stock FROM producto WHERE id = ?");
+    $stmt->execute([$productoId]);
+    $producto = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $producto && $producto['stock'] >= $cantidad;
+}
+
+public function actualizarStock($productoId, $cantidad)
+{
+    $stmt = $this->db->prepare("UPDATE producto SET stock = stock + ? WHERE id = ?");
+    return $stmt->execute([$cantidad, $productoId]);
+}
 }

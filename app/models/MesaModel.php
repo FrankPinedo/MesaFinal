@@ -114,7 +114,11 @@ class MesaModel
         $stmt = $this->db->prepare("UPDATE mesas SET estado = ? WHERE id = ?");
         $stmt->execute([$nuevoEstado, $id]);
     }
-
-
-
+    // Agregar este método que falta:
+    public function obtenerMesaPorId($id)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM mesas WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }
