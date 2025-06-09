@@ -52,6 +52,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
     <link rel="stylesheet" href="<?= BASE_URL ?>/public/assets/css/mozo/inicio/inicio.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+/* ... estilos existentes ... */
+
+/* Mesa seleccionada */
+.mesa-card.seleccionada {
+    border: 3px solid #0d6efd !important;
+    box-shadow: 0 0 20px rgba(13, 110, 253, 0.5) !important;
+    transform: scale(1.05);
+}
+
+/* Botón comanda deshabilitado */
+.menu-icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.menu-icon-btn:disabled img {
+    filter: grayscale(100%);
+}
+</style>
+
 </head>
 
 <body>
@@ -62,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                 <h5 class="mb-4 text-center">MENÚ</h5>
                 <div class="row row-cols-2 g-3 justify-content-center">
                     <div class="col text-center">
-                        <button class="menu-icon-btn">
+                        <button class="menu-icon-btn" id="btnComanda" disabled>
                             <img src="<?= BASE_URL ?>/public/assets/img/comanda.png" alt="Comanda">
                             <span>Comanda</span>
                         </button>
@@ -169,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado_id'], 
                     $nombre = htmlspecialchars($mesa['nombre']);
                     ?>
                     <div class="col-6 col-sm-4 col-md-3">
-                        <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" data-id="<?= $mesa['id'] ?>">
+                        <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" data-id="<?= $mesa['id'] ?>"data-mesa="<?= $mesa['nombre'] ?>"data-estado="<?= $mesa['estado'] ?>">
                             <div class="card-body d-flex flex-column align-items-center justify-content-center py-4 position-relative">
                                 <?php
                                 if ($mesa['estado'] === 'combinada' && strpos($nombre, '|') !== false) {

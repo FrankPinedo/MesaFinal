@@ -199,3 +199,91 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 });
+// Variables para el modo comanda
+let modoComandaActivo = false;
+let mesaSeleccionadaComanda = null;
+
+// Inicializar el botón de comanda como deshabilitado
+document.addEventListener("DOMContentLoaded", function() {
+    const btnComanda = document.querySelector('.menu-icon-btn img[alt="Comanda"]').parentElement;
+    btnComanda.classList.add('disabled');
+    btnComanda.style.opacity = '0.5';
+    btnComanda.style.cursor = 'not-allowed';
+});
+
+// Función para activar/desactivar modo comanda
+function activarModoComanda() {
+    modoComandaActivo = true;
+    
+    // Resaltar solo mesas ocupadas (reservado, esperando, pagando)
+    document.querySelectorAll('.mesa-btn').forEach(mesa => {
+        const estado = mesa.dataset.estado;
+        if (estado === 'libre') {
+            mesa.style.opacity = '0.3';
+            mesa.style.pointerEvents = 'none';
+        } else {
+            mesa.classList.add('modo-comanda');
+            mesa.style.border = '2px solid #28a745';
+            mesa.style.cursor = 'pointer';
+        }
+    });
+    
+    // Mostrar mensaje
+    const mensajeComanda = document.createElement('div');
+    mensajeComanda.id = 'mensajeComanda';
+    mensajeComanda.className = 'alert alert-info text-center fw-bold mb-3';
+    mensajeComanda.textContent = '📝 Selecciona una mesa para gestionar su comanda';
+    document.querySelector('#contenedorMesas').before(mensajeComanda);
+}
+
+// Modificar el evento click de las mesas para incluir modo comanda
+document.querySelectorAll('.mesa-btn').forEach((mesa) => {
+    mesa.addEventListener('click', function() {
+        if (modoComandaActivo) {
+            mesaSeleccionadaComanda = {
+                id: mesa.dataset.id,
+                nombre: mesa.dataset.mesa
+            };
+            
+            // Crear formulario y enviarlo
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = `${window.location.origin}/MesaLista/mozo/comanda`;
+            
+            const inputMesa = document.createElement('input');
+            inputMesa.type = 'hidden';
+            inputMesa.name = 'mesa';
+            inputMesa.value = mesaSeleccionadaComanda.id;
+            
+            form.appendChild(inputMesa);
+            document.body.appendChild(form);
+            form.submit();
+        }
+        // ... resto del código existente para otros modos
+    });
+});
+
+// Agregar evento al botón de comanda
+document.querySelector('.menu-icon-btn img[alt="Comanda"]').parentElement.addEventListener('click', function(e) {
+    if (!this.classList.contains('disabled')) {
+        e.preventDefault();
+        activarModoComanda();
+    }
+});
+
+// Habilitar botón comanda cuando se seleccione una mesa
+document.querySelectorAll('.mesa-btn').forEach(mesa => {
+    mesa.addEventListener('click', function() {
+        const estado = this.dataset.estado;
+        if (estado !== 'libre' && !modoEliminarActivo && !modoSeparar && seleccionadasParaJuntar.length === 0) {
+            const btnComanda = document.querySelector('.menu-icon-btn img[alt="Comanda"]').parentElement;
+            btnComanda.classList.remove('disabled');
+            btnComanda.style.opacity = '1';
+            btnComanda.style.cursor = 'pointer';
+            
+            // Resaltar mesa seleccionada
+            document.querySelectorAll('.mesa-btn').forEach(m => m.classList.remove('mesa-seleccionada'));
+            this.classList.add('mesa-seleccionada');
+        }
+    });
+});

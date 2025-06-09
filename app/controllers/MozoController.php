@@ -66,4 +66,54 @@ class MozoController
         header("Location: " . BASE_URL . "/login");
         exit();
     }
+    public function comanda($mesaId = null)
+    {
+        if (!$mesaId) {
+            header("Location: " . BASE_URL . "/mozo");
+            exit();
+        }
+
+        $usuario = $this->usuario;
+
+        // Cargar modelos necesarios
+        require_once __DIR__ . '/../models/MesaModel.php';
+        require_once __DIR__ . '/../models/ProductoModel.php';
+        require_once __DIR__ . '/../models/ComandaModel.php';
+
+        $mesaModel = new MesaModel();
+        $productoModel = new ProductoModel();
+        $comandaModel = new ComandaModel();
+
+        // Obtener información de la mesa
+        $mesa = $mesaModel->obtenerMesaPorId($mesaId);
+        if (!$mesa) {
+            header("Location: " . BASE_URL . "/mozo");
+            exit();
+        }
+
+        // Verificar si hay comanda activa para esta mesa
+        $comanda = $comandaModel->obtenerComandaActivaPorMesa($mesaId);
+        if (!$comanda) {
+            // Crear nueva comanda
+            $comandaId = $comandaModel->crearComanda($mesaId, $usuario['id_user']);
+            $comanda = ['id_comanda' => $comandaId, 'total' => 0];
+            $detalles = [];
+        } else {
+            // Obtener detalles de comanda existente
+            $detalles = $comandaModel->obtenerDetallesComanda($comanda['id_comanda']);
+        }
+
+        // Obtener productos disponibles
+        $platos = $productoModel->obtenerProductosDisponiblesPorTipo(2); // tipo plato
+        $bebidas = $productoModel->obtenerProductosDisponiblesPorTipo(1); // tipo bebida
+        $combos = $productoModel->obtenerProductosDisponiblesPorTipo(4); // tipo combo
+
+        // Calcular total
+        $total = 0;
+        foreach ($detalles as $detalle) {
+            $total += $detalle['precio'] * $detalle['cantidad'];
+        }
+
+        require_once __DIR__ . '/../views/mozo/comanda.php';
+    }
 }

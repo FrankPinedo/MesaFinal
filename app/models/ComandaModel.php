@@ -203,5 +203,34 @@ class ComandaModel
         $this->conn->close();
     }
 
-    
+    public function crearComanda($mesaId, $usuarioId)
+    {
+        $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
+            VALUES (?, ?, 'pendiente', 3, NOW())"; // 3 = comedor
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $mesaId, $usuarioId);
+        $stmt->execute();
+        return $this->conn->insert_id;
+    }
+
+    public function obtenerComandaActivaPorMesa($mesaId)
+    {
+        $sql = "SELECT * FROM comanda 
+            WHERE mesa_id = ? AND estado IN ('pendiente', 'recibido') 
+            ORDER BY fecha DESC LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
+
+    public function agregarItemComanda($comandaId, $productoId, $cantidad, $comentario = '')
+    {
+        $sql = "INSERT INTO detalle_comanda (comanda_id, producto_id, cantidad, comentario) 
+            VALUES (?, ?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("iiis", $comandaId, $productoId, $cantidad, $comentario);
+        return $stmt->execute();
+    }
 }
