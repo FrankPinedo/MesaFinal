@@ -295,7 +295,7 @@ class ComandaModel
         $data = $result->fetch_assoc();
         return $data ? $data['minutos'] : 0;
     }
-        public function crearComandaDelivery($usuarioId)
+    public function crearComandaDelivery($usuarioId)
     {
         // Crear comanda sin mesa asociada, con tipo de entrega "para llevar" (id=2)
         $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
@@ -307,20 +307,83 @@ class ComandaModel
     }
 
     public function obtenerComandaPorId($comandaId)
-{
-    $sql = "SELECT c.*, m.nombre as mesa_nombre 
+    {
+        $sql = "SELECT c.*, m.nombre as mesa_nombre 
             FROM comanda c
             LEFT JOIN mesas m ON c.mesa_id = m.id
             WHERE c.id = ?";
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bind_param("i", $comandaId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    return $result->fetch_assoc();
-}
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $comandaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
+    }
 
     public function __destruct()
     {
         $this->conn->close();
+    }
+    
+    // Obtener total de todas las comandas de una mesa
+    public function obtenerTotalMesa($mesaId)
+    {
+        $sql = "SELECT SUM(dc.cantidad * p.precio) as total
+                FROM comanda c
+                JOIN detalle_comanda dc ON c.id = dc.comanda_id
+                JOIN producto p ON dc.producto_id = p.id
+                WHERE c.mesa_id = ? 
+                AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo')
+                AND dc.cancelado = 0";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        
+        return $row['total'] ?? 0;
+    }
+    
+    // Obtener todas las comandas activas de una mesa
+    public function obtenerComandasMesa($mesaId)
+    {
+        $sql = "SELECT c.*, DATE_FORMAT(c.fecha, '%H:%i') as hora
+                FROM comanda c
+                WHERE c.mesa_id = ? 
+                AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo')
+                ORDER BY c.fecha ASC";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $comandas = [];
+        while ($row = $result->fetch_assoc()) {
+            $comandas[] = $row;
+        }
+        
+        return $comandas;
+    }
+    
+    // Obtener comandas en estado 'listo'
+    public function obtenerComandasListas()
+    {
+        $sql = "SELECT c.id, m.nombre as mesa
+                FROM comanda c
+                LEFT JOIN mesas m ON c.mesa_id = m.id
+                WHERE c.estado = 'listo'";
+        
+        $result = $this->conn->query($sql);
+        $comandas = [];
+        
+        while ($row = $result->fetch_assoc()) {
+            $comandas[] = [
+                'id' => $row['id'],
+                'mesa' => $row['mesa'] ?? 'Delivery'
+            ];
+        }
+        
+        return $comandas;
     }
 }

@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         confirmarEnvioModal.show();
     });
-    
+
     // Confirmar envío
     document.getElementById('confirmarEnvio').addEventListener('click', function() {
         // Deshabilitar botón mientras procesa
@@ -268,11 +268,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 mostrarAlerta('Comanda enviada a cocina', 'success');
+                confirmarEnvioModal.hide();
                 
-                // Redirigir a vista de comanda enviada después de 1.5 segundos
-                setTimeout(() => {
-                    window.location.href = `${BASE_URL}/mozo/comanda?comanda=${idComanda}`;
-                }, 1500);
+                // Cambiar interfaz a modo "enviada"
+                cambiarModoEnviada();
             } else {
                 mostrarAlerta(data.message || 'Error al enviar comanda', 'danger');
                 this.disabled = false;
@@ -319,6 +318,110 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Confirmar envío
+    document.getElementById('confirmarEnvio').addEventListener('click', function() {
+        // Deshabilitar botón mientras procesa
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+        
+        fetch(`${BASE_URL}/mozo/enviarComanda`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id_comanda: idComanda
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Comanda enviada a cocina', 'success');
+                confirmarEnvioModal.hide();
+                
+                // Cambiar interfaz a modo "enviada"
+                cambiarModoEnviada();
+            } else {
+                mostrarAlerta(data.message || 'Error al enviar comanda', 'danger');
+                this.disabled = false;
+                this.innerHTML = 'Enviar a cocina';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error de conexión', 'danger');
+            this.disabled = false;
+            this.innerHTML = 'Enviar a cocina';
+        });
+    });
+    
+    // Función para cambiar la interfaz a modo "enviada"
+    function cambiarModoEnviada() {
+        // Cambiar botón aceptar
+        btnAceptar.textContent = 'Nueva Comanda';
+        btnAceptar.classList.remove('btn-success');
+        btnAceptar.classList.add('btn-primary');
+        btnAceptar.onclick = function() {
+            if (confirm('¿Crear una nueva comanda para esta mesa?')) {
+                location.reload();
+            }
+        };
+        
+        // Deshabilitar productos
+        document.querySelectorAll('.producto-card').forEach(card => {
+            card.classList.add('disabled');
+            card.dataset.disponible = '0';
+        });
+        
+        // Mostrar mensaje de estado
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-info alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <i class="bi bi-info-circle"></i> 
+            <strong>Comanda enviada a cocina.</strong> 
+            Puedes agregar más items hasta que cocina marque como "recibido".
+        `;
+        document.querySelector('.card-body.p-0').prepend(alertDiv);
+        
+        // Verificar estado cada 5 segundos
+        verificarEstadoComanda();
+    }
+    
+    // Verificar si cocina ya recibió la comanda
+    function verificarEstadoComanda() {
+        const intervalo = setInterval(() => {
+            fetch(`${BASE_URL}/mozo/verificarEstadoComanda/${idComanda}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.estado) {
+                    // Si cocina ya recibió, bloquear edición
+                    if (data.estado === 'recibido' || data.estado === 'listo') {
+                        clearInterval(intervalo);
+                        bloquearEdicion();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error verificando estado:', error);
+            });
+        }, 5000);
+    }
+    
+    // Bloquear edición completa
+    function bloquearEdicion() {
+        // Ocultar botones de eliminar y comentario
+        document.querySelectorAll('.eliminar-btn, .comentario-btn').forEach(btn => {
+            btn.style.display = 'none';
+        });
+        
+        // Cambiar mensaje
+        document.querySelector('.alert-info').innerHTML = `
+            <i class="bi bi-lock"></i> 
+            <strong>Comanda en preparación.</strong> 
+            No se pueden hacer cambios. Crea una nueva comanda si necesitas agregar más items.
+        `;
+    }
+
     // Cargar comanda inicial
     actualizarComanda();
     

@@ -176,7 +176,6 @@ function limpiarSeleccion() {
     actualizarBotones();
     document.getElementById('mensajeSeleccionMultiple').classList.add('d-none');
 }
-
 // Deseleccionar mesas al hacer clic fuera
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.mesa-card') && 
@@ -225,6 +224,73 @@ function actualizarTiempoMesas() {
         }
     });
 }
+
+// Sistema de notificaciones
+let notificaciones = [];
+const campanaIcon = document.querySelector('.bi-bell-fill');
+const notificationBadge = document.createElement('span');
+notificationBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+notificationBadge.style.display = 'none';
+campanaIcon.parentElement.style.position = 'relative';
+campanaIcon.parentElement.appendChild(notificationBadge);
+
+// Verificar comandas listas
+function verificarComandasListas() {
+    fetch(`${BASE_URL}/mozo/verificarComandasListas`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.comandasListas && data.comandasListas.length > 0) {
+                // Actualizar badge
+                notificationBadge.textContent = data.comandasListas.length;
+                notificationBadge.style.display = 'block';
+                
+                // Mostrar notificación toast
+                data.comandasListas.forEach(comanda => {
+                    if (!notificaciones.includes(comanda.id)) {
+                        notificaciones.push(comanda.id);
+                        mostrarNotificacion(`¡Comanda #${comanda.id} de ${comanda.mesa} está lista!`);
+                    }
+                });
+            } else {
+                notificationBadge.style.display = 'none';
+            }
+        })
+        .catch(error => console.error('Error verificando comandas:', error));
+}
+
+function mostrarNotificacion(mensaje) {
+    const toast = document.createElement('div');
+    toast.className = 'position-fixed bottom-0 end-0 p-3';
+    toast.style.zIndex = '1050';
+    toast.innerHTML = `
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong class="me-auto">Comanda Lista</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    
+    // Sonido de notificación
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZijUHGWm98OScTgwOUarm7blmFgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+    audio.play();
+    
+    setTimeout(() => toast.remove(), 5000);
+}
+
+// Agregar click en campana para ver notificaciones
+campanaIcon.addEventListener('click', function() {
+    window.location.href = `${BASE_URL}/mozo/notificaciones`;
+});
+
+// Verificar cada 10 segundos
+setInterval(verificarComandasListas, 10000);
+verificarComandasListas(); // Verificar al cargar
 
 // Actualizar tiempo cada minuto
 setInterval(actualizarTiempoMesas, 60000);
