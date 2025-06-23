@@ -23,17 +23,14 @@ class CocinaController
 
     public function index()
     {
-        // Vista principal que cargará los datos via AJAX
         require_once __DIR__ . '/../views/cocina/inicio.php';
     }
 
-    /* Obtiene las comandas pendientes para AJAX */
     public function obtenerComandas()
     {
         try {
             header('Content-Type: application/json');
 
-            // Verificar sesión y permisos primero
             if ($this->usuario['rol'] !== 'cocinero') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Acceso no autorizado']);
@@ -50,7 +47,6 @@ class CocinaController
         }
     }
 
-    /* Actualiza el estado de una comanda */
     public function actualizarEstado()
     {
         try {
@@ -71,7 +67,6 @@ class CocinaController
         }
     }
 
-    /* Cancela un item específico */
     public function cancelarItem()
     {
         try {
@@ -88,7 +83,6 @@ class CocinaController
         }
     }
 
-    /* Recupera un item cancelado */
     public function recuperarItem()
     {
         try {
@@ -105,7 +99,6 @@ class CocinaController
         }
     }
 
-    /* Cancela una comanda completa */
     public function cancelarComanda()
     {
         try {
@@ -131,14 +124,12 @@ class CocinaController
         exit();
     }
 
-    /* Helper para obtener datos JSON de la petición */
     private function obtenerDatosPeticion()
     {
         $json = file_get_contents('php://input');
         return json_decode($json, true);
     }
 
-    /* Envía una respuesta JSON estandarizada */
     private function enviarRespuestaJson($data, $statusCode = 200)
     {
         header('Content-Type: application/json');

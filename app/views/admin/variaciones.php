@@ -98,7 +98,7 @@
             <div class="menuItems_desktop">
                 <ul class="listItems p-0 m-0">
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin" class="navlink" target="_blank">
+                        <a href="<?= BASE_URL; ?>/admin" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> home </span>
                             <span class="nameItem">Inicio</span>
@@ -112,7 +112,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin/platos" class="navlink">
+                        <a href="<?= BASE_URL; ?>/admin/productos" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> flatware </span>
                             <span class="nameItem">Platos</span>
@@ -195,7 +195,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="<?= BASE_URL; ?>/admin/platos" class="navlink">
+                            <a href="<?= BASE_URL; ?>/admin/productos" class="navlink">
                                 <div class="line"></div>
                                 <span class="material-symbols-outlined"> flatware </span>
                                 <span class="nameItem">Platos</span>
@@ -237,10 +237,20 @@
                     <div class="mb-8">
                         <h2 class="text-xl font-semibold mb-4">Formulario de Bebida</h2>
                         <form action="<?= BASE_URL ?>/admin/guardarBebida" method="post" class="max-w-md">
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <label for="nombreBebida" class="block text-gray-700 mb-2">Nombre de Bebida</label>
                                 <input type="text" id="nombreBebida" name="nombre" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Estado:</label>
+                                <select
+                                    name="estado"
+                                    id="estado"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="1">Habilitado</option>
+                                    <option value="0">Deshabilitado</option>
+                                </select>
                             </div>
                             <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
                                 Guardar Bebida
@@ -251,11 +261,12 @@
                     <div>
                         <h2 class="text-xl font-semibold mb-4">Tabla de Bebidas</h2>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white border border-gray-200">
+                            <table class="min-w-full bg-white border border-gray-200" data-table="tipo_bebida">
                                 <thead>
                                     <tr class="bg-gray-100">
                                         <th class="py-2 px-4 border-b">ID</th>
                                         <th class="py-2 px-4 border-b">Nombre</th>
+                                        <th class="py-2 px-4 border-b">Estado</th>
                                         <th class="py-2 px-4 border-b">Acciones</th>
                                     </tr>
                                 </thead>
@@ -264,9 +275,23 @@
                                         <tr>
                                             <td class="py-2 px-4 border-b "><?= htmlspecialchars($bebida['id']) ?></td>
                                             <td class="py-2 px-4 border-b "><?= htmlspecialchars($bebida['nombre']) ?></td>
+                                            <td class="py-2 px-4 border-b">
+                                                <?php if ($bebida['estado']): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Habilitado</span>
+                                                <?php else: ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Deshabilitado</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="py-2 px-4 border-b ">
-                                                <button class="text-blue-500 hover:text-blue-700 mr-2">Editar</button>
-                                                <button class="text-red-500 hover:text-red-700">Eliminar</button>
+                                                <?php if ($bebida['estado']): ?>
+                                                    <button class="text-red-600 hover:text-red-900" data-bs-toggle="modal" data-bs-target="#disableModal" data-product-id="<?= $bebida['id'] ?>" data-product-name="<?= htmlspecialchars($bebida['nombre']) ?>">
+                                                        Deshabilitar
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button class="text-green-600 hover:text-green-900" data-bs-toggle="modal" data-bs-target="#enableModal" data-product-id="<?= $bebida['id'] ?>" data-product-name="<?= htmlspecialchars($bebida['nombre']) ?>">
+                                                        Habilitar
+                                                    </button>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -281,10 +306,20 @@
                     <div class="mb-8">
                         <h2 class="text-xl font-semibold mb-4">Formulario de Plato</h2>
                         <form action="<?= BASE_URL ?>/admin/guardarPlato" method="post" class="max-w-md">
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <label for="nombrePlato" class="block text-gray-700 mb-2">Nombre de Plato</label>
                                 <input type="text" id="nombrePlato" name="nombre" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Estado:</label>
+                                <select
+                                    name="estado"
+                                    id="estado"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="1">Habilitado</option>
+                                    <option value="0">Deshabilitado</option>
+                                </select>
                             </div>
                             <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">
                                 Guardar Plato
@@ -296,11 +331,12 @@
                         <h2 class="text-xl font-semibold mb-4">Tabla de Platos</h2>
                         <div class="overflow-x-auto">
 
-                            <table class="min-w-full bg-white border border-gray-200 mb-6">
+                            <table class="min-w-full bg-white border border-gray-200 mb-6" data-table="tipo_plato">
                                 <thead>
                                     <tr class="bg-gray-100">
                                         <th class="py-2 px-4 border-b">ID</th>
                                         <th class="py-2 px-4 border-b">Nombre</th>
+                                        <th class="py-2 px-4 border-b">Estado</th>
                                         <th class="py-2 px-4 border-b">Acciones</th>
                                     </tr>
                                 </thead>
@@ -310,8 +346,22 @@
                                             <td class="py-2 px-4 border-b"><?= htmlspecialchars($plato['id']) ?></td>
                                             <td class="py-2 px-4 border-b"><?= htmlspecialchars($plato['nombre']) ?></td>
                                             <td class="py-2 px-4 border-b">
-                                                <button class="text-blue-500 hover:text-blue-700 mr-2">Editar</button>
-                                                <button class="text-red-500 hover:text-red-700">Eliminar</button>
+                                                <?php if ($plato['estado']): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Habilitado</span>
+                                                <?php else: ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Deshabilitado</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="py-2 px-4 border-b">
+                                                <?php if ($plato['estado']): ?>
+                                                    <button class="text-red-600 hover:text-red-900" data-bs-toggle="modal" data-bs-target="#disableModal" data-product-id="<?= $plato['id'] ?>" data-product-name="<?= htmlspecialchars($plato['nombre']) ?>">
+                                                        Deshabilitar
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button class="text-green-600 hover:text-green-900" data-bs-toggle="modal" data-bs-target="#enableModal" data-product-id="<?= $plato['id'] ?>" data-product-name="<?= htmlspecialchars($plato['nombre']) ?>">
+                                                        Habilitar
+                                                    </button>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -327,10 +377,20 @@
                     <div class="mb-8">
                         <h2 class="text-xl font-semibold mb-4">Formulario de Tamaño</h2>
                         <form action="<?= BASE_URL ?>/admin/guardarTamano" method="post" class="max-w-md">
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <label for="nombreTamano" class="block text-gray-700 mb-2">Nombre de Tamaño</label>
                                 <input type="text" id="nombreTamano" name="nombre" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Estado:</label>
+                                <select
+                                    name="estado"
+                                    id="estado"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="1">Habilitado</option>
+                                    <option value="0">Deshabilitado</option>
+                                </select>
                             </div>
                             <button type="submit" class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition">
                                 Guardar Tamaño
@@ -341,11 +401,12 @@
                     <div>
                         <h2 class="text-xl font-semibold mb-4">Tabla de Tamaños</h2>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white border border-gray-200">
+                            <table class="min-w-full bg-white border border-gray-200" data-table="tamanos">
                                 <thead>
                                     <tr class="bg-gray-100">
                                         <th class="py-2 px-4 border-b">ID</th>
                                         <th class="py-2 px-4 border-b">Nombre</th>
+                                        <th class="py-2 px-4 border-b">Estado</th>
                                         <th class="py-2 px-4 border-b">Acciones</th>
                                     </tr>
                                 </thead>
@@ -354,9 +415,23 @@
                                         <tr>
                                             <td class="py-2 px-4 border-b "><?= htmlspecialchars($tam['id']) ?></td>
                                             <td class="py-2 px-4 border-b "><?= htmlspecialchars($tam['nombre']) ?></td>
+                                            <td class="py-2 px-4 border-b">
+                                                <?php if ($tam['estado']): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Habilitado</span>
+                                                <?php else: ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Deshabilitado</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="py-2 px-4 border-b ">
-                                                <button class="text-blue-500 hover:text-blue-700 mr-2">Editar</button>
-                                                <button class="text-red-500 hover:text-red-700">Eliminar</button>
+                                                <?php if ($tam['estado']): ?>
+                                                    <button class="text-red-600 hover:text-red-900" data-bs-toggle="modal" data-bs-target="#disableModal" data-product-id="<?= $tam['id'] ?>" data-product-name="<?= htmlspecialchars($tam['nombre']) ?>">
+                                                        Deshabilitar
+                                                    </button>
+                                                <?php else: ?>
+                                                    <button class="text-green-600 hover:text-green-900" data-bs-toggle="modal" data-bs-target="#enableModal" data-product-id="<?= $tam['id'] ?>" data-product-name="<?= htmlspecialchars($tam['nombre']) ?>">
+                                                        Habilitar
+                                                    </button>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -374,16 +449,16 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="disableModalLabel">Deshabilitar Guarnición</h5>
+                    <h5 class="modal-title" id="disableModalLabel">Deshabilitar</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Estás seguro que deseas deshabilitar la guarnición <span id="disableProductName" class="font-semibold"></span>?</p>
-                    <p class="text-red-500 mt-2">Esta guarnición ya no estará disponible para la venta.</p>
+                    <p>¿Estás seguro que deseas deshabilitar el elemento <span id="disableProductName" class="font-semibold"></span>?</p>
+                    <p class="text-red-500 mt-2">Este elemento ya no estará disponible para la venta.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger">Confirmar Deshabilitar</button>
+                    <button id="confirmDisable" type="button" class="btn btn-danger">Confirmar Deshabilitar</button>
                 </div>
             </div>
         </div>
@@ -394,90 +469,24 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="enableModalLabel">Habilitar Guarnición</h5>
+                    <h5 class="modal-title" id="enableModalLabel">Habilitar</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Estás seguro que deseas habilitar la guarnicióon <span id="enableProductName" class="font-semibold"></span>?</p>
-                    <p class="text-green-500 mt-2">Esta guarnición estará disponible para la venta.</p>
+                    <p>¿Estás seguro que deseas habilitar el elemento <span id="enableProductName" class="font-semibold"></span>?</p>
+                    <p class="text-green-500 mt-2">Este elemento estará disponible para la venta.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success">Confirmar Habilitar</button>
+                    <button id="confirmEnable" type="button" class="btn btn-success">Confirmar Habilitar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Deshabilitar
-            const disableModal = document.getElementById('disableModal');
-            disableModal.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const productId = button.getAttribute('data-product-id');
-                const productName = button.getAttribute('data-product-name');
-                disableModal.querySelector('#disableProductName').textContent = productName;
-
-                // Guardar ID en botón de confirmar
-                const confirmBtn = disableModal.querySelector('.btn-danger');
-                confirmBtn.onclick = function() {
-                    window.location.href = `?accion=deshabilitar&id=${productId}`;
-                };
-            });
-
-            // Habilitar
-            const enableModal = document.getElementById('enableModal');
-            enableModal.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const productId = button.getAttribute('data-product-id');
-                const productName = button.getAttribute('data-product-name');
-                enableModal.querySelector('#enableProductName').textContent = productName;
-
-                // Guardar ID en botón de confirmar
-                const confirmBtn = enableModal.querySelector('.btn-success');
-                confirmBtn.onclick = function() {
-                    window.location.href = `?accion=habilitar&id=${productId}`;
-                };
-            });
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const btnBebida = document.getElementById('btnBebida');
-            const btnPlato = document.getElementById('btnPlato');
-            const btnTamano = document.getElementById('btnTamano');
-
-            const seccionBebida = document.getElementById('seccionBebida');
-            const seccionPlato = document.getElementById('seccionPlato');
-            const seccionTamano = document.getElementById('seccionTamano');
-
-            // Mostrar sección Bebida por defecto
-            seccionBebida.classList.remove('hidden');
-
-            btnBebida.addEventListener('click', function() {
-                seccionBebida.classList.remove('hidden');
-                seccionPlato.classList.add('hidden');
-                seccionTamano.classList.add('hidden');
-            });
-
-            btnPlato.addEventListener('click', function() {
-                seccionBebida.classList.add('hidden');
-                seccionPlato.classList.remove('hidden');
-                seccionTamano.classList.add('hidden');
-            });
-
-            btnTamano.addEventListener('click', function() {
-                seccionBebida.classList.add('hidden');
-                seccionPlato.classList.add('hidden');
-                seccionTamano.classList.remove('hidden');
-            });
-        });
-    </script>
-
     <script src="<?= BASE_URL ?>/public/assets/js/admin/fragment.js"></script>
 
-    <script src="<?= BASE_URL ?>/public/assets/js/admin/agregar.js"></script>
+    <script src="<?= BASE_URL ?>/public/assets/js/admin/agregarVar.js"></script>
 
     <script
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"

@@ -12,7 +12,6 @@ class ComandaModel
     }
 
     // Crear nueva comanda con mesa y usuario
-    // Crear nueva comanda con mesa y usuario
     public function crearComanda($mesaId, $usuarioId)
     {
         // Primero verificar si ya existe una comanda activa para esta mesa
@@ -323,7 +322,7 @@ class ComandaModel
     {
         $this->conn->close();
     }
-    
+
     // Obtener total de todas las comandas de una mesa
     public function obtenerTotalMesa($mesaId)
     {
@@ -334,16 +333,16 @@ class ComandaModel
                 WHERE c.mesa_id = ? 
                 AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo')
                 AND dc.cancelado = 0";
-        
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);
         $stmt->execute();
         $result = $stmt->get_result();
         $row = $result->fetch_assoc();
-        
+
         return $row['total'] ?? 0;
     }
-    
+
     // Obtener todas las comandas activas de una mesa
     public function obtenerComandasMesa($mesaId)
     {
@@ -352,38 +351,49 @@ class ComandaModel
                 WHERE c.mesa_id = ? 
                 AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo')
                 ORDER BY c.fecha ASC";
-        
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $comandas = [];
         while ($row = $result->fetch_assoc()) {
             $comandas[] = $row;
         }
-        
+
         return $comandas;
     }
-    
-    // Obtener comandas en estado 'listo'
+
     public function obtenerComandasListas()
     {
         $sql = "SELECT c.id, m.nombre as mesa
                 FROM comanda c
                 LEFT JOIN mesas m ON c.mesa_id = m.id
                 WHERE c.estado = 'listo'";
-        
+
         $result = $this->conn->query($sql);
         $comandas = [];
-        
+
         while ($row = $result->fetch_assoc()) {
             $comandas[] = [
                 'id' => $row['id'],
                 'mesa' => $row['mesa'] ?? 'Delivery'
             ];
         }
-        
+
         return $comandas;
+    }
+
+    public function finalizarComandasMesa($mesaId)
+    {
+        $sql = "UPDATE comanda 
+                SET estado = 'pagado' 
+                WHERE mesa_id = ? 
+                AND estado IN ('nueva', 'pendiente', 'recibido', 'listo')";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        return $stmt->execute();
     }
 }

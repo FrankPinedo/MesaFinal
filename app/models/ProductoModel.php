@@ -157,14 +157,11 @@ class ProductoModel
     public function insertarComponentesCombo($comboId, $componentes)
     {
         try {
-            // Iniciar transacción
             $this->db->beginTransaction();
 
-            // Eliminar componentes existentes
             $deleteStmt = $this->db->prepare("DELETE FROM combo_componentes WHERE combo_id = ?");
             $deleteStmt->execute([$comboId]);
 
-            // Insertar nuevos componentes
             $insertStmt = $this->db->prepare("
             INSERT INTO combo_componentes 
             (combo_id, producto_id, obligatorio, cantidad, grupo) 
@@ -181,11 +178,9 @@ class ProductoModel
                 ]);
             }
 
-            // Confirmar transacción
             $this->db->commit();
             return true;
         } catch (PDOException $e) {
-            // Revertir en caso de error
             $this->db->rollBack();
             error_log("Error al insertar componentes del combo: " . $e->getMessage());
             return false;
@@ -198,78 +193,99 @@ class ProductoModel
         $extension = strtolower(pathinfo($nombreOriginal, PATHINFO_EXTENSION));
         $tiposPermitidos = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
-        // Validar tipo de archivo
         if (!in_array($extension, $tiposPermitidos)) {
             return false; // O lanzar excepción personalizada
         }
 
-        // Validar que realmente sea una imagen
         $esImagen = getimagesize($archivo['tmp_name']);
         if ($esImagen === false) {
             return false;
         }
 
-        // Generar nombre único
         $hash = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $nombreOriginal);
         $rutaFinal = $carpetaDestino . $hash;
 
-        // Mover imagen
         if (move_uploaded_file($archivo['tmp_name'], $rutaFinal)) {
-            return $hash; // Solo el nombre, para guardar en la DB
+            return $hash;
         } else {
             return false;
         }
     }
-    public function guardarTipoBebida($nombre)
+    public function guardarTipoBebida($nombre, $estado)
     {
-        $stmt = $this->db->prepare("INSERT INTO tipo_bebida (nombre) VALUES (:nombre)");
+        $stmt = $this->db->prepare("INSERT INTO tipo_bebida (nombre, estado) VALUES (:nombre, :estado)");
         $stmt->bindParam(':nombre', $nombre);
+        $stmt->bindParam(':estado', $estado, PDO::PARAM_INT);
         return $stmt->execute();
     }
-
-    public function guardarTipoPlato($nombre)
+    public function guardarTipoPlato($nombre, $estado)
     {
-        $stmt = $this->db->prepare("INSERT INTO tipo_plato (nombre) VALUES (:nombre)");
+        $stmt = $this->db->prepare("INSERT INTO tipo_plato (nombre, estado) VALUES (:nombre, :estado)");
         $stmt->bindParam(':nombre', $nombre);
+        $stmt->bindParam(':estado', $estado, PDO::PARAM_INT);
         return $stmt->execute();
     }
-
-    public function guardarTamano($nombre)
+    public function guardarTamano($nombre, $estado)
     {
-        $stmt = $this->db->prepare("INSERT INTO tamano (nombre) VALUES (:nombre)");
+        $stmt = $this->db->prepare("INSERT INTO tamano (nombre, estado) VALUES (:nombre, :estado)");
         $stmt->bindParam(':nombre', $nombre);
+        $stmt->bindParam(':estado', $estado, PDO::PARAM_INT);
         return $stmt->execute();
     }
+    public function cambiarEstadoVar($id, $estado, $tabla)
+    {
+        $validTables = ['tipo_bebida', 'tipo_plato', 'tamanos'];
+        if (!in_array($tabla, $validTables)) {
+            throw new Exception("Tabla no válida");
+        }
 
-    // Agregar estos métodos que faltan:
-public function obtenerProductosPorTipo($tipoId, $soloActivos = false)
-{
-    $sql = "SELECT p.*, p.id as id_plato FROM producto p 
+        $stmt = $this->db->prepare("UPDATE $tabla SET estado = :estado WHERE id = :id");
+        $stmt->bindParam(':estado', $estado, PDO::PARAM_INT);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+    public function obtenerTiposBebida()
+    {
+        $stmt = $this->db->query("SELECT * FROM tipo_bebida");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function obtenerTiposPlato()
+    {
+        $stmt = $this->db->query("SELECT * FROM tipo_plato");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function obtenerTamanos()
+    {
+        $stmt = $this->db->query("SELECT * FROM tamano");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    // ---
+    public function obtenerProductosPorTipo($tipoId, $soloActivos = false)
+    {
+        $sql = "SELECT p.*, p.id as id_plato FROM producto p 
             WHERE p.tipo_producto_id = :tipo";
-    
-    if ($soloActivos) {
-        $sql .= " AND p.estado = 1";
+
+        if ($soloActivos) {
+            $sql .= " AND p.estado = 1";
+        }
+
+        $sql .= " ORDER BY p.nombre";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['tipo' => $tipoId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    $sql .= " ORDER BY p.nombre";
-    
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute(['tipo' => $tipoId]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+    public function verificarStock($productoId, $cantidad)
+    {
+        $stmt = $this->db->prepare("SELECT stock FROM producto WHERE id = ?");
+        $stmt->execute([$productoId]);
+        $producto = $stmt->fetch(PDO::FETCH_ASSOC);
 
-public function verificarStock($productoId, $cantidad)
-{
-    $stmt = $this->db->prepare("SELECT stock FROM producto WHERE id = ?");
-    $stmt->execute([$productoId]);
-    $producto = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    return $producto && $producto['stock'] >= $cantidad;
-}
-
-public function actualizarStock($productoId, $cantidad)
-{
-    $stmt = $this->db->prepare("UPDATE producto SET stock = stock + ? WHERE id = ?");
-    return $stmt->execute([$cantidad, $productoId]);
-}
+        return $producto && $producto['stock'] >= $cantidad;
+    }
+    public function actualizarStock($productoId, $cantidad)
+    {
+        $stmt = $this->db->prepare("UPDATE producto SET stock = stock + ? WHERE id = ?");
+        return $stmt->execute([$cantidad, $productoId]);
+    }
 }

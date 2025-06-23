@@ -95,7 +95,7 @@
             <div class="menuItems_desktop">
                 <ul class="listItems p-0 m-0">
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin" class="navlink" target="_blank">
+                        <a href="<?= BASE_URL; ?>/admin" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> home </span>
                             <span class="nameItem">Inicio</span>
@@ -219,7 +219,6 @@
         </div>
     </header>
 
-
     <main>
         <div class="container-fluid p-3 m-0 h-100 d-flex flex-column">
             <!-- Breadcrumb y Título -->
@@ -247,25 +246,17 @@
                     </a>
                 </div>
                 <div class="col">
-                    <a href="<?= BASE_URL ?>/admin/platos" class="text-decoration-none">
+                    <a href="<?= BASE_URL ?>/admin/productos" class="text-decoration-none">
                         <div class="card text-center shadow-sm h-100">
                             <div class="card-body">
                                 <i class="bi bi-egg-fried fs-1 text-success"></i>
-                                <p class="mt-2 fw-semibold">Platos</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col">
-                    <a href="<?= BASE_URL ?>/admin/bebidas" class="text-decoration-none">
-                        <div class="card text-center shadow-sm h-100">
-                            <div class="card-body">
                                 <i class="bi bi-cup-straw fs-1 text-warning"></i>
-                                <p class="mt-2 fw-semibold">Bebidas</p>
+                                <p class="mt-2 fw-semibold">Productos</p>
                             </div>
                         </div>
                     </a>
                 </div>
+
                 <div class="col">
                     <a href="<?= BASE_URL ?>/admin/usuarios" class="text-decoration-none">
                         <div class="card text-center shadow-sm h-100">

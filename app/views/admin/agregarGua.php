@@ -33,6 +33,7 @@
 </head>
 
 <body>
+
     <header>
         <div class="page-loader flex-column" id="page-loader">
             <div
@@ -97,7 +98,7 @@
             <div class="menuItems_desktop">
                 <ul class="listItems p-0 m-0">
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin" class="navlink" target="_blank">
+                        <a href="<?= BASE_URL; ?>/admin" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> home </span>
                             <span class="nameItem">Inicio</span>
@@ -111,7 +112,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin/platos" class="navlink">
+                        <a href="<?= BASE_URL; ?>/admin/productos" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> flatware </span>
                             <span class="nameItem">Platos</span>
@@ -194,7 +195,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="<?= BASE_URL; ?>/admin/platos" class="navlink">
+                            <a href="<?= BASE_URL; ?>/admin/productos" class="navlink">
                                 <div class="line"></div>
                                 <span class="material-symbols-outlined"> flatware </span>
                                 <span class="nameItem">Platos</span>
@@ -233,6 +234,45 @@
                         Agregar/Editar Guarnición
                     </h2>
 
+                    <!-- Envío exitoso -->
+                    <?php if (isset($_SESSION['success_guarnicion'])): ?>
+                        <div class="fixed top-4 right-4 z-50" id="success-alert">
+                            <div class="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" role="alert">
+                                <svg class="flex-shrink-0 inline w-4 h-4 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM13.707 7.707a1 1 0 0 1-1.414 1.414L9 7.414l-1.293 1.293a1 1 0 0 1-1.414-1.414L7.586 6 6.293 4.707a1 1 0 0 1 1.414-1.414L9 4.586l1.293-1.293a1 1 0 0 1 1.414 1.414L10.414 6l1.293 1.707Z" />
+                                </svg>
+                                <span class="sr-only">Éxito</span>
+                                <div>
+                                    <span class="font-medium">¡Éxito!</span> <?= htmlspecialchars($_SESSION['success_guarnicion']) ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php unset($_SESSION['success_guarnicion']); ?>
+                        <script>
+                            setTimeout(() => {
+                                const alert = document.getElementById('success-alert');
+                                if (alert) {
+                                    alert.style.transition = 'opacity 0.5s ease';
+                                    alert.style.opacity = '0';
+                                    setTimeout(() => alert.remove(), 500);
+                                }
+                            }, 3000);
+                        </script>
+                    <?php endif; ?>
+
+                    <!-- Alerta backend -->
+                    <?php if (isset($_SESSION['error_guarnicion'])): ?>
+                        <div id="mensaje_error" class="alert alert-danger w-100 mb-4">
+                            <strong>Atención:</strong> <?= htmlspecialchars($_SESSION['error_guarnicion']) ?>
+                        </div>
+                        <?php unset($_SESSION['error_guarnicion']); ?>
+                    <?php endif; ?>
+
+                    <!-- Alerta fronted -->
+                    <div class="alert alert-danger alert-dismissible fade show hidden_2" role="alert" id="message_error">
+                        <strong>Atención:</strong> Este es un mensaje de advertencia.
+                    </div>
+
                     <form id="guarnicion-form" method="POST" enctype="multipart/form-data" action="<?= BASE_URL ?>/admin/guardarGuarnicion" class="space-y-4">
                         <input type="hidden" name="id" id="guarnicion-id">
 
@@ -243,7 +283,7 @@
                                     type="text"
                                     name="nombre"
                                     id="nombre"
-                                    required
+
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
 
@@ -263,11 +303,10 @@
                                 <div class="relative rounded-md shadow-sm">
                                     <div
                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500 sm:text-sm">$</span>
+                                        <span class="text-gray-500 sm:text-sm">S/</span>
                                     </div>
                                     <input
                                         type="number"
-                                        step="0.01"
                                         name="precio"
                                         id="precio"
                                         required
@@ -511,8 +550,7 @@
     </script>
 
     <script src="<?= BASE_URL ?>/public/assets/js/admin/fragment.js"></script>
-    
-    <script src="<?= BASE_URL ?>/public/assets/js/admin/agregar.js"></script>
+
 
     <script
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"

@@ -319,7 +319,7 @@ async function fetchOrders() {
   }
 }
 
-// Actualizar estado de una comanda (pendiente → recibido → listo)
+// Actualizar estado de una comanda
 async function updateOrderStatus(orderId, status) {
   const allowedTransitions = {
     recibido: ["pendiente"],

@@ -33,6 +33,7 @@
 </head>
 
 <body>
+
     <header>
         <div class="page-loader flex-column" id="page-loader">
             <div
@@ -97,7 +98,7 @@
             <div class="menuItems_desktop">
                 <ul class="listItems p-0 m-0">
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin" class="navlink" target="_blank">
+                        <a href="<?= BASE_URL; ?>/admin" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> home </span>
                             <span class="nameItem">Inicio</span>
@@ -111,7 +112,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin/platos" class="navlink">
+                        <a href="<?= BASE_URL; ?>/admin/productos" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> flatware </span>
                             <span class="nameItem">Platos</span>
@@ -194,7 +195,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="<?= BASE_URL; ?>/admin/platos" class="navlink">
+                            <a href="<?= BASE_URL; ?>/admin/productos" class="navlink">
                                 <div class="line"></div>
                                 <span class="material-symbols-outlined"> flatware </span>
                                 <span class="nameItem">Platos</span>
@@ -231,7 +232,7 @@
                     <i class="fas fa-utensils mr-2"></i> Agregar Guarniciones
                 </a>
                 <a href="<?= BASE_URL; ?>/admin/variaciones" class="btn btn-info flex-1 py-3 px-4 text-center rounded-lg shadow hover:shadow-md transition">
-                    <i class="fas fa-ruler-combined mr-2"></i> Tipos/Tamaños
+                    <i class="fas fa-ruler-combined mr-2"></i> Variaciones
                 </a>
             </div>
 

@@ -33,6 +33,7 @@
 </head>
 
 <body>
+
     <header>
         <div class="page-loader flex-column" id="page-loader">
             <div
@@ -97,7 +98,7 @@
             <div class="menuItems_desktop">
                 <ul class="listItems p-0 m-0">
                     <li>
-                        <a href="<?= BASE_URL; ?>/admin" class="navlink" target="_blank">
+                        <a href="<?= BASE_URL; ?>/admin" class="navlink">
                             <div class="line"></div>
                             <span class="material-symbols-outlined"> home </span>
                             <span class="nameItem">Inicio</span>
@@ -233,6 +234,45 @@
                         Agregar/Editar Producto
                     </h2>
 
+                    <!-- Envío exitoso -->
+                    <?php if (isset($_SESSION['success_producto'])): ?>
+                        <div class="fixed top-4 right-4 z-50" id="success-alert">
+                            <div class="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" role="alert">
+                                <svg class="flex-shrink-0 inline w-4 h-4 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM13.707 7.707a1 1 0 0 1-1.414 1.414L9 7.414l-1.293 1.293a1 1 0 0 1-1.414-1.414L7.586 6 6.293 4.707a1 1 0 0 1 1.414-1.414L9 4.586l1.293-1.293a1 1 0 0 1 1.414 1.414L10.414 6l1.293 1.707Z" />
+                                </svg>
+                                <span class="sr-only">Éxito</span>
+                                <div>
+                                    <span class="font-medium">¡Éxito!</span> <?= htmlspecialchars($_SESSION['success_producto']) ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php unset($_SESSION['success_producto']); ?>
+                        <script>
+                            setTimeout(() => {
+                                const alert = document.getElementById('success-alert');
+                                if (alert) {
+                                    alert.style.transition = 'opacity 0.5s ease';
+                                    alert.style.opacity = '0';
+                                    setTimeout(() => alert.remove(), 500);
+                                }
+                            }, 3000);
+                        </script>
+                    <?php endif; ?>
+
+                    <!-- Alerta backend -->
+                    <?php if (isset($_SESSION['error_producto'])): ?>
+                        <div id="mensaje_error" class="alert alert-danger w-100 mb-4">
+                            <strong>Atención:</strong> <?= htmlspecialchars($_SESSION['error_producto']) ?>
+                        </div>
+                        <?php unset($_SESSION['error_producto']); ?>
+                    <?php endif; ?>
+
+                    <!-- Alerta fronted -->
+                    <div class="alert alert-danger alert-dismissible fade show hidden_2" role="alert" id="message_error">
+                        <strong>Atención:</strong> Este es un mensaje de advertencia.
+                    </div>
+
                     <form id="producto-form" method="POST" enctype="multipart/form-data" action="<?= BASE_URL ?>/admin/guardarProducto" class="space-y-4">
 
                         <div class="grid grid-cols-1 gap-4">
@@ -250,6 +290,7 @@
                                 <textarea
                                     name="descripcion"
                                     rows="3"
+                                    required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                             </div>
                         </div>
@@ -260,11 +301,10 @@
                                 <div class="relative rounded-md shadow-sm">
                                     <div
                                         class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500 sm:text-sm">$</span>
+                                        <span class="text-gray-500 sm:text-sm">S/</span>
                                     </div>
                                     <input
                                         type="number"
-                                        step="0.01"
                                         name="precio"
                                         required
                                         class="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
@@ -276,6 +316,7 @@
                                 <input
                                     type="number"
                                     name="stock"
+                                    required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
                         </div>
@@ -298,6 +339,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Tamaño:</label>
                                 <select
                                     name="tamano_id"
+                                    required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                     <option value="">Ninguno</option>
                                     <?php foreach ($tamanos as $tam): ?>
@@ -393,6 +435,7 @@
                             </button>
                         </div>
                     </form>
+
                 </div>
 
                 <!-- Tabla de Productos -->
@@ -552,6 +595,7 @@
     </div>
 
     <script src="<?= BASE_URL ?>/public/assets/js/admin/fragment.js"></script>
+
     <script src="<?= BASE_URL ?>/public/assets/js/admin/agregarPro.js"></script>
 
     <script
