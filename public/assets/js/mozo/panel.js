@@ -29,9 +29,9 @@ document.addEventListener("DOMContentLoaded", function () {
       totalSeleccionadas === 1 && hayCombinadaSeleccionada
     );
 
-    // Botón Cerrar Cuenta: solo activo si hay 1 mesa seleccionada que no sea libre
+    // Botón Cerrar Cuenta: solo activo si hay 1 mesa seleccionada en estado "atendido"
     btnCerrarCuenta.disabled = !(
-      totalSeleccionadas === 1 && mesasSeleccionadas[0].estado !== "libre"
+      totalSeleccionadas === 1 && mesasSeleccionadas[0].estado === "atendido"
     );
 
     // Mostrar mensaje si hay selección múltiple
@@ -188,17 +188,16 @@ document.addEventListener("DOMContentLoaded", function () {
   btnCerrarCuenta.addEventListener("click", function () {
     if (
       mesasSeleccionadas.length === 1 &&
-      mesasSeleccionadas[0].estado !== "libre"
+      mesasSeleccionadas[0].estado === "atendido"
     ) {
       const mesaId = mesasSeleccionadas[0].id;
 
       // Verificar si hay comandas para esta mesa
-      // En la línea 117 de panel.js, modifica el fetch:
       fetch(`${BASE_URL}/mozo/verificarComandasMesa/${mesaId}`)
         .then((response) => response.json())
         .then((data) => {
-          console.log("Debug comandas:", data); // Agregar esta línea
           if (data.tieneComandas) {
+            // Redirigir a la vista de cuenta
             window.location.href = `${BASE_URL}/mozo/mostrarCuenta/${mesaId}`;
           } else {
             alert("Esta mesa no tiene comandas activas");
@@ -208,6 +207,8 @@ document.addEventListener("DOMContentLoaded", function () {
           console.error("Error:", error);
           alert("Error al verificar comandas de la mesa");
         });
+    } else {
+      alert('Solo puedes cerrar cuenta de mesas en estado "Atendido"');
     }
   });
 
@@ -375,5 +376,12 @@ document.addEventListener("DOMContentLoaded", function () {
     btnDelivery: !!btnDelivery,
     btnCerrarCuenta: !!btnCerrarCuenta,
     totalMesas: document.querySelectorAll(".mesa-card").length,
+  });
+  // Inicializar tooltips de Bootstrap
+  var tooltipTriggerList = [].slice.call(
+    document.querySelectorAll('[data-bs-toggle="tooltip"]')
+  );
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
   });
 });

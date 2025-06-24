@@ -82,9 +82,21 @@
         color: white;
     }
 
-    .mesa-pagando {
-        background-color: #198754;
+    .mesa-ocupada {
+        background-color: #f77700;
         color: white;
+    }
+
+    .mesa-atendido {
+        background-color: #198754;
+        /* Verde */
+        color: white;
+    }
+
+    /* Clase personalizada para badge naranja */
+    .bg-orange {
+        background-color: #fd7e14 !important;
+        color: white !important;
     }
 
     /* ==== MESA COMBINADA ==== */
@@ -196,4 +208,3 @@
         box-shadow: 0 0 8px #0d6efd;
         cursor: pointer;
     }
-

@@ -15,41 +15,41 @@ class MesaModel
     }
 
     // Agrega una nueva mesa con nombre automático y estado 'libre'
-public function agregarMesa()
-{
-    // Obtener solo los números de las mesas que siguen el patrón M#
-    $stmt = $this->db->query("SELECT nombre FROM mesas WHERE nombre REGEXP '^M[0-9]+$'");
-    $nombres = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    public function agregarMesa()
+    {
+        // Obtener solo los números de las mesas que siguen el patrón M#
+        $stmt = $this->db->query("SELECT nombre FROM mesas WHERE nombre REGEXP '^M[0-9]+$'");
+        $nombres = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    $numerosUsados = [];
-    foreach ($nombres as $nombre) {
-        // Extraer solo el número después de 'M'
-        if (preg_match('/^M(\d+)$/', $nombre, $match)) {
-            $numerosUsados[] = (int)$match[1];
-        }
-    }
-
-    // Si no hay mesas, empezar en 1
-    if (empty($numerosUsados)) {
-        $nuevoNumero = 1;
-    } else {
-        // Ordenar y buscar el primer hueco
-        sort($numerosUsados);
-        $nuevoNumero = 1;
-        
-        foreach ($numerosUsados as $numero) {
-            if ($numero != $nuevoNumero) {
-                break;
+        $numerosUsados = [];
+        foreach ($nombres as $nombre) {
+            // Extraer solo el número después de 'M'
+            if (preg_match('/^M(\d+)$/', $nombre, $match)) {
+                $numerosUsados[] = (int)$match[1];
             }
-            $nuevoNumero++;
         }
+
+        // Si no hay mesas, empezar en 1
+        if (empty($numerosUsados)) {
+            $nuevoNumero = 1;
+        } else {
+            // Ordenar y buscar el primer hueco
+            sort($numerosUsados);
+            $nuevoNumero = 1;
+
+            foreach ($numerosUsados as $numero) {
+                if ($numero != $nuevoNumero) {
+                    break;
+                }
+                $nuevoNumero++;
+            }
+        }
+
+        $nuevoNombre = 'M' . $nuevoNumero;
+
+        $stmt = $this->db->prepare("INSERT INTO mesas (nombre, estado) VALUES (?, 'libre')");
+        $stmt->execute([$nuevoNombre]);
     }
-
-    $nuevoNombre = 'M' . $nuevoNumero;
-
-    $stmt = $this->db->prepare("INSERT INTO mesas (nombre, estado) VALUES (?, 'libre')");
-    $stmt->execute([$nuevoNombre]);
-}
 
     public function juntarMesas($id1, $id2)
     {
@@ -187,20 +187,29 @@ public function agregarMesa()
     }
 
     public function cambiarEstado($id, $nuevoEstado)
-    {
-        try {
-            $estadosValidos = ['libre', 'reservado', 'esperando', 'pagando', 'combinada'];
-            if (!in_array($nuevoEstado, $estadosValidos)) {
-                return false;
-            }
-
-            $stmt = $this->db->prepare("UPDATE mesas SET estado = ? WHERE id = ?");
-            return $stmt->execute([$nuevoEstado, $id]);
-        } catch (Exception $e) {
-            error_log("Error al cambiar estado de mesa: " . $e->getMessage());
+{
+    try {
+        // Asegurarse de que 'ocupada' esté en la lista
+        $estadosValidos = ['libre', 'reservado', 'ocupada', 'esperando', 'atendido', 'combinada'];
+        
+        if (!in_array($nuevoEstado, $estadosValidos)) {
+            error_log("Estado no válido: " . $nuevoEstado);
             return false;
         }
+
+        $stmt = $this->db->prepare("UPDATE mesas SET estado = ? WHERE id = ?");
+        $resultado = $stmt->execute([$nuevoEstado, $id]);
+        
+        if (!$resultado) {
+            error_log("Error al ejecutar UPDATE: " . implode(", ", $stmt->errorInfo()));
+        }
+        
+        return $resultado;
+    } catch (Exception $e) {
+        error_log("Error al cambiar estado de mesa: " . $e->getMessage());
+        return false;
     }
+}
 
     // Obtener mesa por ID
     public function obtenerMesaPorId($id)

@@ -1,6 +1,7 @@
 <?php if (!defined('BASE_URL')) require_once __DIR__ . '/../../../config/config.php'; ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8" />
     <title>Panel Mozo - MesaLista</title>
@@ -16,6 +17,17 @@
             border: 3px solid #0d6efd !important;
             box-shadow: 0 0 20px rgba(13, 110, 253, 0.5) !important;
             transform: scale(1.05);
+        }
+
+        /* Agregar estos estilos dentro del tag <style> que ya creamos */
+        .btn-cambiar-estado:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-cambiar-estado:disabled:hover {
+            background-color: transparent;
+            color: #6c757d;
         }
 
         .mesa-card.seleccionada-multiple {
@@ -71,10 +83,28 @@
             animation: pulse 1s infinite;
         }
 
+        /* Estilos para botón Cerrar Cuenta */
+        #btnCerrarCuenta:not(:disabled) {
+            background-color: rgba(40, 167, 69, 0.1);
+            border-radius: 8px;
+        }
+
+        #btnCerrarCuenta:not(:disabled):hover {
+            background-color: rgba(40, 167, 69, 0.2);
+        }
+
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -93,7 +123,11 @@
                         </button>
                     </div>
                     <div class="col text-center">
-                        <button class="menu-icon-btn" id="btnCerrarCuenta" disabled>
+                        <button class="menu-icon-btn" id="btnCerrarCuenta"
+                            disabled
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="Selecciona una mesa en estado 'Atendido' para cerrar cuenta">
                             <img src="<?= BASE_URL ?>/public/assets/img/CerrarCuenta.png" alt="Cerrar Cuenta">
                             <span>Cerrar Cuenta</span>
                         </button>
@@ -176,61 +210,70 @@
                         // Determinar color del badge según estado
                         $badgeColor = 'secondary';
                         if ($mesa['estado'] === 'reservado') $badgeColor = 'warning';
+                        elseif ($mesa['estado'] === 'ocupada') $badgeColor = 'orange';
                         elseif ($mesa['estado'] === 'esperando') $badgeColor = 'danger';
-                        elseif ($mesa['estado'] === 'pagando') $badgeColor = 'success';
+                        elseif ($mesa['estado'] === 'atendido') $badgeColor = 'success';
                         elseif ($mesa['estado'] === 'combinada') $badgeColor = 'info';
 
                         // Clases para la tarjeta según estado
                         $clase = 'mesa-libre';
                         if ($mesa['estado'] === 'reservado')
                             $clase = 'mesa-reservado';
+                        elseif ($mesa['estado'] === 'ocupada')
+                            $clase = 'mesa-ocupada';
                         elseif ($mesa['estado'] === 'esperando')
                             $clase = 'mesa-esperando';
-                        elseif ($mesa['estado'] === 'pagando')
-                            $clase = 'mesa-pagando';
+                        elseif ($mesa['estado'] === 'atendido')
+                            $clase = 'mesa-atendido';
                         elseif ($mesa['estado'] === 'combinada')
                             $clase = 'mesa-combinada';
 
-                        $nombre = htmlspecialchars($mesa['nombre']);
-                        $esCombinada = strpos($nombre, '|') !== false;
+                        // Verificar si es combinada ANTES de usarla
+                        $nombreMesa = isset($mesa['nombre']) ? htmlspecialchars($mesa['nombre']) : '';
+                        $esCombinada = strpos($nombreMesa, '|') !== false;
                         ?>
                         <div class="col-6 col-sm-4 col-md-3">
-                            <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>" 
-                                 data-id="<?= $mesa['id'] ?>"
-                                 data-mesa="<?= $mesa['nombre'] ?>"
-                                 data-estado="<?= $mesa['estado'] ?>"
-                                 data-combinada="<?= $esCombinada ? 'true' : 'false' ?>">
+                            <div class="card mesa-card shadow-sm rounded-4 animate-mesa <?= $clase ?>"
+                                data-id="<?= $mesa['id'] ?>"
+                                data-mesa="<?= $nombreMesa ?>"
+                                data-estado="<?= $mesa['estado'] ?>"
+                                data-combinada="<?= $esCombinada ? 'true' : 'false' ?>">
                                 <div class="card-body d-flex flex-column align-items-center justify-content-center py-4 position-relative">
                                     <?php
                                     if ($esCombinada) {
                                         // Mostrar como M1 + M2
-                                        $partes = explode('|', $nombre);
-                                        $mesasCombinadas = trim($partes[0]) . ' + ' . trim($partes[1]);
+                                        $partes = explode('|', $nombreMesa);
+                                        $mesasCombinadas = '';
+                                        if (count($partes) >= 2) {
+                                            $mesasCombinadas = trim($partes[0]) . ' + ' . trim($partes[1]);
+                                        }
                                         echo "<span class='mesa-nombre-combinado'>{$mesasCombinadas}</span>";
                                     } else {
-                                        echo "<span class='fw-bold fs-4 mb-2'>{$nombre}</span>";
+                                        echo "<span class='fw-bold fs-4 mb-2'>{$nombreMesa}</span>";
                                     }
                                     ?>
                                     <span class="badge bg-<?= $badgeColor ?> mb-2"><?= ucfirst($mesa['estado']) ?></span>
-                                    
+
                                     <?php if ($mesa['estado'] === 'esperando' && isset($mesa['tiempo_comanda'])): ?>
                                         <span class="tiempo-comanda" data-minutos="<?= $mesa['tiempo_comanda'] ?>">
                                             ⏱ <?= $mesa['tiempo_comanda'] ?> min
                                         </span>
                                     <?php endif; ?>
-                                    
+
                                     <div class="d-flex gap-2">
+                                        <!-- En la sección del botón cambiar estado -->
                                         <button class="btn btn-outline-secondary btn-sm btn-cambiar-estado"
                                             data-bs-toggle="modal"
                                             data-bs-target="#modalCambiarEstado"
                                             data-id="<?= $mesa['id'] ?>"
-                                            data-nombre="<?= $mesa['nombre'] ?>"
-                                            data-estado="<?= $mesa['estado'] ?>">
+                                            data-nombre="<?= $nombreMesa ?>"
+                                            data-estado="<?= $mesa['estado'] ?>"
+                                            <?= (!in_array($mesa['estado'], ['libre', 'reservado', 'ocupada'])) ? 'disabled' : '' ?>>
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
                                         <button class="btn btn-outline-danger btn-sm btn-eliminar-mesa"
                                             data-id="<?= $mesa['id'] ?>"
-                                            data-nombre="<?= $mesa['nombre'] ?>"
+                                            data-nombre="<?= $nombreMesa ?>"
                                             title="Eliminar mesa">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -247,11 +290,12 @@
             </div>
 
             <!-- LEYENDA -->
-            <div class="mt-4 d-flex justify-content-center gap-4">
+            <div class="mt-4 d-flex justify-content-center gap-4 flex-wrap">
                 <span><span class="badge bg-secondary">&nbsp;&nbsp;</span> Libre</span>
                 <span><span class="badge bg-warning">&nbsp;&nbsp;</span> Reservado</span>
+                <span><span class="badge bg-orange">&nbsp;&nbsp;</span> Ocupada</span>
                 <span><span class="badge bg-danger">&nbsp;&nbsp;</span> Esperando</span>
-                <span><span class="badge bg-success">&nbsp;&nbsp;</span> Pagando</span>
+                <span><span class="badge bg-success">&nbsp;&nbsp;</span> Atendido</span>
                 <span><span class="badge bg-info">&nbsp;&nbsp;</span> Combinada</span>
             </div>
         </div>
@@ -320,6 +364,7 @@
     </div>
 
     <!-- Modal: Cambiar estado -->
+    <!-- Modal: Cambiar estado (alrededor de línea 287) -->
     <div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center">
@@ -331,11 +376,9 @@
                     <div class="modal-body">
                         <input type="hidden" name="cambiar_estado_id" id="cambiarEstadoId">
                         <p id="nombreMesaCambio"></p>
-                        <select name="nuevo_estado" class="form-select" required>
-                            <option value="libre">Libre</option>
-                            <option value="reservado">Reservado</option>
-                            <option value="esperando">Esperando</option>
-                            <option value="pagando">Pagando</option>
+                        <p class="text-muted small mb-3" id="estadoActualInfo"></p>
+                        <select name="nuevo_estado" id="selectNuevoEstado" class="form-select" required>
+                            <!-- Las opciones se llenarán dinámicamente -->
                         </select>
                     </div>
                     <div class="modal-footer">
@@ -347,8 +390,20 @@
         </div>
     </div>
 
+
     <script src="<?= BASE_URL ?>/public/assets/js/mozo/panel.js"></script>
     <script src="<?= BASE_URL ?>/public/assets/js/mozo/mozo.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Agregar al final del archivo, antes del </body>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar tooltips de Bootstrap
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+    </script>
 </body>
+
 </html>

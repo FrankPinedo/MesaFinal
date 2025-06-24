@@ -77,11 +77,36 @@ class MozoController
                 exit();
             }
 
-            // Cambiar estado
+            // Cambiar estado 
             if (isset($_POST['cambiar_estado_id']) && isset($_POST['nuevo_estado'])) {
                 $id = intval($_POST['cambiar_estado_id']);
-                $estado = $_POST['nuevo_estado'];
-                $this->mesaModel->cambiarEstado($id, $estado);
+                $nuevoEstado = $_POST['nuevo_estado'];
+
+                // Obtener el estado actual de la mesa
+                $mesaActual = $this->mesaModel->obtenerMesaPorId($id);
+
+                // Validar los cambios permitidos
+                $cambiosPermitidos = [
+                    'libre' => ['reservado', 'ocupada'],
+                    'reservado' => ['ocupada', 'libre'], // Agregar 'libre' aquí también
+                    'ocupada' => ['libre']
+                ];
+
+                // Debug - agregar temporalmente
+                error_log("Estado actual: " . $mesaActual['estado']);
+                error_log("Nuevo estado solicitado: " . $nuevoEstado);
+                error_log("Cambio permitido: " . (isset($cambiosPermitidos[$mesaActual['estado']]) && in_array($nuevoEstado, $cambiosPermitidos[$mesaActual['estado']]) ? 'SI' : 'NO'));
+
+                if (
+                    $mesaActual &&
+                    isset($cambiosPermitidos[$mesaActual['estado']]) &&
+                    in_array($nuevoEstado, $cambiosPermitidos[$mesaActual['estado']])
+                ) {
+
+                    $resultado = $this->mesaModel->cambiarEstado($id, $nuevoEstado);
+                    error_log("Resultado del cambio: " . ($resultado ? 'EXITOSO' : 'FALLIDO'));
+                }
+
                 header("Location: " . BASE_URL . "/mozo");
                 exit();
             }
@@ -154,6 +179,7 @@ class MozoController
                 exit();
             }
 
+            // Alrededor de la línea 185, después de obtener info de la mesa
             // Verificar si hay comanda activa para esta mesa
             $comanda = $this->comandaModel->obtenerComandaActivaPorMesa($mesaId);
             if (!$comanda) {
@@ -312,10 +338,9 @@ class MozoController
 
         // Cambiar estado de comanda de 'nueva' a 'pendiente' (para cocina)
         if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'pendiente')) {
-            // Obtener información de la comanda para actualizar la mesa si aplica
             $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
             if ($comanda && $comanda['mesa_id']) {
-                // Actualizar estado de la mesa a 'esperando'
+                // Cambiar a 'esperando' en lugar de solo 'esperando'
                 $this->mesaModel->cambiarEstado($comanda['mesa_id'], 'esperando');
             }
 
@@ -417,35 +442,35 @@ class MozoController
     }
 
     public function verificarComandasMesa($mesaId)
-{
-    header('Content-Type: application/json');
+    {
+        header('Content-Type: application/json');
 
-    try {
-        // Debug: Ver todas las comandas de esta mesa
-        $sqlDebug = "SELECT id, estado, fecha FROM comanda WHERE mesa_id = ?";
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        $stmt = $conn->prepare($sqlDebug);
-        $stmt->bind_param("i", $mesaId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $todasLasComandas = [];
-        while($row = $result->fetch_assoc()) {
-            $todasLasComandas[] = $row;
+        try {
+            // Debug: Ver todas las comandas de esta mesa
+            $sqlDebug = "SELECT id, estado, fecha FROM comanda WHERE mesa_id = ?";
+            $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            $stmt = $conn->prepare($sqlDebug);
+            $stmt->bind_param("i", $mesaId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $todasLasComandas = [];
+            while ($row = $result->fetch_assoc()) {
+                $todasLasComandas[] = $row;
+            }
+
+            $comandas = $this->comandaModel->obtenerComandasMesa($mesaId);
+
+            echo json_encode([
+                'tieneComandas' => count($comandas) > 0,
+                'cantidadComandas' => count($comandas),
+                'comandas' => $comandas,
+                'debug_todas' => $todasLasComandas,
+                'mesa_id' => $mesaId
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['tieneComandas' => false, 'error' => $e->getMessage()]);
         }
-        
-        $comandas = $this->comandaModel->obtenerComandasMesa($mesaId);
-        
-        echo json_encode([
-            'tieneComandas' => count($comandas) > 0,
-            'cantidadComandas' => count($comandas),
-            'comandas' => $comandas,
-            'debug_todas' => $todasLasComandas,
-            'mesa_id' => $mesaId
-        ]);
-    } catch (Exception $e) {
-        echo json_encode(['tieneComandas' => false, 'error' => $e->getMessage()]);
     }
-}
 
     public function cambiarEstadoMesa()
     {
@@ -511,37 +536,41 @@ class MozoController
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     }
-public function marcarEntregada()
-{
-    header('Content-Type: application/json');
+    public function marcarEntregada()
+    {
+        header('Content-Type: application/json');
 
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false]);
-        exit();
-    }
-
-    $data = json_decode(file_get_contents('php://input'), true);
-    $comandaId = $data['comanda_id'] ?? null;
-
-    if (!$comandaId) {
-        echo json_encode(['success' => false, 'message' => 'ID de comanda no proporcionado']);
-        exit();
-    }
-
-    try {
-        // Cambiar estado a 'entregado' para que no aparezca más en las notificaciones
-        if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'entregado')) {
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Error al actualizar estado']);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false]);
+            exit();
         }
-    } catch (Exception $e) {
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $comandaId = $data['comanda_id'] ?? null;
+
+        if (!$comandaId) {
+            echo json_encode(['success' => false, 'message' => 'ID de comanda no proporcionado']);
+            exit();
+        }
+
+        try {
+            // Obtener información de la comanda antes de actualizar
+            $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
+
+            // Cambiar estado a 'entregado'
+            if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'entregado')) {
+                // Si la comanda tiene mesa asociada, cambiar estado a 'atendido'
+                if ($comanda && $comanda['mesa_id']) {
+                    $this->mesaModel->cambiarEstado($comanda['mesa_id'], 'atendido');
+                }
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Error al actualizar estado']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
-}
-
-    
-
     public function logout()
     {
         session_start();

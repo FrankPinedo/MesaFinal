@@ -83,6 +83,10 @@
 
         // Función para eliminar notificación permanentemente
         function eliminarNotificacion(elemento, comandaId) {
+
+            if (!confirm('¿Ya entregaste este pedido a la mesa?')) {
+                return;
+            }
             // Animación de desvanecimiento
             elemento.style.transition = 'all 0.3s ease';
             elemento.style.transform = 'translateX(-100%)';
