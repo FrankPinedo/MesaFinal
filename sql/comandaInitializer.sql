@@ -652,3 +652,8 @@ VALUES
     (21, 10, 1, 1, 'fondo'),
     (21, 4, 1, 1, 'entrada'),
     (21, 15, 1, 1, 'bebida');
+
+    -- Modificar la tabla comanda para incluir el estado 'entregado' y 'pagado'
+ALTER TABLE comanda 
+MODIFY COLUMN estado ENUM('nueva', 'pendiente', 'recibido', 'listo', 'entregado', 'pagado', 'cancelado') 
+DEFAULT 'nueva';

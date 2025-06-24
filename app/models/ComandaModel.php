@@ -39,8 +39,8 @@ class ComandaModel
     public function obtenerComandaActivaPorMesa($mesaId)
     {
         $sql = "SELECT * FROM comanda 
-            WHERE mesa_id = ? AND estado IN ('nueva', 'pendiente', 'recibido') 
-            ORDER BY fecha DESC LIMIT 1";
+        WHERE mesa_id = ? AND estado IN ('nueva', 'pendiente', 'recibido', 'listo', 'entregado') 
+        ORDER BY fecha DESC LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);
         $stmt->execute();
@@ -327,12 +327,12 @@ class ComandaModel
     public function obtenerTotalMesa($mesaId)
     {
         $sql = "SELECT SUM(dc.cantidad * p.precio) as total
-                FROM comanda c
-                JOIN detalle_comanda dc ON c.id = dc.comanda_id
-                JOIN producto p ON dc.producto_id = p.id
-                WHERE c.mesa_id = ? 
-                AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo')
-                AND dc.cancelado = 0";
+            FROM comanda c
+            JOIN detalle_comanda dc ON c.id = dc.comanda_id
+            JOIN producto p ON dc.producto_id = p.id
+            WHERE c.mesa_id = ? 
+            AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo', 'entregado')
+            AND dc.cancelado = 0";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);
@@ -347,10 +347,10 @@ class ComandaModel
     public function obtenerComandasMesa($mesaId)
     {
         $sql = "SELECT c.*, DATE_FORMAT(c.fecha, '%H:%i') as hora
-                FROM comanda c
-                WHERE c.mesa_id = ? 
-                AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo')
-                ORDER BY c.fecha ASC";
+            FROM comanda c
+            WHERE c.mesa_id = ? 
+            AND c.estado IN ('nueva', 'pendiente', 'recibido', 'listo', 'entregado')
+            ORDER BY c.fecha ASC";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);
@@ -365,12 +365,13 @@ class ComandaModel
         return $comandas;
     }
 
+    // En ComandaModel.php - línea ~461
     public function obtenerComandasListas()
     {
         $sql = "SELECT c.id, m.nombre as mesa
-                FROM comanda c
-                LEFT JOIN mesas m ON c.mesa_id = m.id
-                WHERE c.estado = 'listo'";
+            FROM comanda c
+            LEFT JOIN mesas m ON c.mesa_id = m.id
+            WHERE c.estado = 'listo'";  // Solo mostrar 'listo', no 'entregado'
 
         $result = $this->conn->query($sql);
         $comandas = [];
@@ -388,9 +389,9 @@ class ComandaModel
     public function finalizarComandasMesa($mesaId)
     {
         $sql = "UPDATE comanda 
-                SET estado = 'pagado' 
-                WHERE mesa_id = ? 
-                AND estado IN ('nueva', 'pendiente', 'recibido', 'listo')";
+            SET estado = 'pagado' 
+            WHERE mesa_id = ? 
+            AND estado IN ('nueva', 'pendiente', 'recibido', 'listo', 'entregado')";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);

@@ -417,19 +417,35 @@ class MozoController
     }
 
     public function verificarComandasMesa($mesaId)
-    {
-        header('Content-Type: application/json');
+{
+    header('Content-Type: application/json');
 
-        try {
-            $comandas = $this->comandaModel->obtenerComandasMesa($mesaId);
-            echo json_encode([
-                'tieneComandas' => count($comandas) > 0,
-                'cantidadComandas' => count($comandas)
-            ]);
-        } catch (Exception $e) {
-            echo json_encode(['tieneComandas' => false, 'error' => $e->getMessage()]);
+    try {
+        // Debug: Ver todas las comandas de esta mesa
+        $sqlDebug = "SELECT id, estado, fecha FROM comanda WHERE mesa_id = ?";
+        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $stmt = $conn->prepare($sqlDebug);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $todasLasComandas = [];
+        while($row = $result->fetch_assoc()) {
+            $todasLasComandas[] = $row;
         }
+        
+        $comandas = $this->comandaModel->obtenerComandasMesa($mesaId);
+        
+        echo json_encode([
+            'tieneComandas' => count($comandas) > 0,
+            'cantidadComandas' => count($comandas),
+            'comandas' => $comandas,
+            'debug_todas' => $todasLasComandas,
+            'mesa_id' => $mesaId
+        ]);
+    } catch (Exception $e) {
+        echo json_encode(['tieneComandas' => false, 'error' => $e->getMessage()]);
     }
+}
 
     public function cambiarEstadoMesa()
     {
@@ -495,34 +511,36 @@ class MozoController
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     }
-    public function marcarEntregada()
-    {
-        header('Content-Type: application/json');
+public function marcarEntregada()
+{
+    header('Content-Type: application/json');
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false]);
-            exit();
-        }
-
-        $data = json_decode(file_get_contents('php://input'), true);
-        $comandaId = $data['comanda_id'] ?? null;
-
-        if (!$comandaId) {
-            echo json_encode(['success' => false, 'message' => 'ID de comanda no proporcionado']);
-            exit();
-        }
-
-        try {
-            // Cambiar estado a 'entregado' para que no aparezca más en las notificaciones
-            if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'entregado')) {
-                echo json_encode(['success' => true]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Error al actualizar estado']);
-            }
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-        }
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false]);
+        exit();
     }
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    $comandaId = $data['comanda_id'] ?? null;
+
+    if (!$comandaId) {
+        echo json_encode(['success' => false, 'message' => 'ID de comanda no proporcionado']);
+        exit();
+    }
+
+    try {
+        // Cambiar estado a 'entregado' para que no aparezca más en las notificaciones
+        if ($this->comandaModel->actualizarEstadoComanda($comandaId, 'entregado')) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al actualizar estado']);
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+
+    
 
     public function logout()
     {

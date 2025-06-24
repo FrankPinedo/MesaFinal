@@ -1,6 +1,7 @@
 <?php if (!defined('BASE_URL')) require_once __DIR__ . '/../../../config/config.php'; ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 </head>
+
 <body class="bg-light">
     <div class="container mt-3">
         <div class="card shadow">
@@ -33,16 +35,16 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        
+
         function cargarNotificaciones() {
             fetch(`${BASE_URL}/mozo/verificarComandasListas`)
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('lista-notificaciones');
-                    
+
                     if (data.comandasListas && data.comandasListas.length > 0) {
                         let html = '<div class="list-group">';
                         data.comandasListas.forEach(comanda => {
@@ -65,11 +67,11 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('lista-notificaciones').innerHTML = 
+                    document.getElementById('lista-notificaciones').innerHTML =
                         '<div class="alert alert-danger">Error al cargar notificaciones</div>';
                 });
         }
-        
+
         function mostrarSinNotificaciones() {
             document.getElementById('lista-notificaciones').innerHTML = `
                 <div class="text-center py-4">
@@ -78,59 +80,60 @@
                 </div>
             `;
         }
-        
+
         // Función para eliminar notificación permanentemente
         function eliminarNotificacion(elemento, comandaId) {
             // Animación de desvanecimiento
             elemento.style.transition = 'all 0.3s ease';
             elemento.style.transform = 'translateX(-100%)';
             elemento.style.opacity = '0';
-            
+
             // Marcar como entregada en el servidor
             fetch(`${BASE_URL}/mozo/marcarEntregada`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    comanda_id: comandaId
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        comanda_id: comandaId
+                    })
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Remover el elemento después de la animación
-                    setTimeout(() => {
-                        elemento.remove();
-                        
-                        // Verificar si quedan notificaciones
-                        const notificacionesRestantes = document.querySelectorAll('.list-group-item').length;
-                        if (notificacionesRestantes === 0) {
-                            mostrarSinNotificaciones();
-                        }
-                    }, 300);
-                } else {
-                    // Si hay error, restaurar el elemento
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remover el elemento después de la animación
+                        setTimeout(() => {
+                            elemento.remove();
+
+                            // Verificar si quedan notificaciones
+                            const notificacionesRestantes = document.querySelectorAll('.list-group-item').length;
+                            if (notificacionesRestantes === 0) {
+                                mostrarSinNotificaciones();
+                            }
+                        }, 300);
+                    } else {
+                        // Si hay error, restaurar el elemento
+                        elemento.style.transition = '';
+                        elemento.style.transform = '';
+                        elemento.style.opacity = '';
+                        alert('Error al marcar como entregada');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Restaurar elemento si hay error
                     elemento.style.transition = '';
                     elemento.style.transform = '';
                     elemento.style.opacity = '';
-                    alert('Error al marcar como entregada');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Restaurar elemento si hay error
-                elemento.style.transition = '';
-                elemento.style.transform = '';
-                elemento.style.opacity = '';
-            });
+                });
         }
-        
+
         // Cargar al inicio
         cargarNotificaciones();
-        
+
         // Actualizar cada 10 segundos
         setInterval(cargarNotificaciones, 10000);
     </script>
 </body>
+
 </html>

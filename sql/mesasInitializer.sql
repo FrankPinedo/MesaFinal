@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS mesas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
-    estado ENUM('libre', 'reservado', 'esperando', 'pagando', 'combinada') NOT NULL DEFAULT 'libre'
+    estado ENUM('libre', 'reservado', 'ocupada', 'esperando', 'atendido', 'pagando', 'combinada') NOT NULL DEFAULT 'libre'
 );
 
 -- Insertar mesas iniciales
