@@ -133,19 +133,6 @@ class MozoController
         $tipoComanda = isset($_GET['tipo']) ? $_GET['tipo'] : 'comedor';
         $comandaId = isset($_GET['comanda']) ? $_GET['comanda'] : null;
 
-        // Si se especifica una comanda existente
-        if ($comandaId) {
-            $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
-
-            // Verificar si la comanda ya fue enviada
-            if ($comanda && $comanda['estado'] !== 'nueva') {
-                // Mostrar vista de comanda enviada
-                $usuario = $this->usuario;
-                require_once __DIR__ . '/../views/mozo/comanda_enviada.php';
-                return;
-            }
-        }
-
         // Si no hay mesa ID y no es delivery, intentar obtenerlo de GET
         if (!$mesaId && $tipoComanda !== 'delivery' && isset($_GET['mesa'])) {
             $mesaId = $_GET['mesa'];
@@ -162,15 +149,16 @@ class MozoController
         // Manejar pedidos delivery
         if ($tipoComanda === 'delivery') {
             $mesa = 'Delivery/Para Llevar';
-            $mesaId = null; // No hay mesa asociada
+            $mesaId = null;
 
-            // Si no hay comanda especificada, crear nueva
             if (!$comandaId) {
                 $comandaId = $this->comandaModel->crearComandaDelivery($usuario['id_user']);
             }
 
-            $comanda = ['id' => $comandaId, 'estado' => 'nueva'];
-            $detalles = [];
+            $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
+            $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comandaId);
+            $comandasAnteriores = [];
+            $numeroComanda = 1;
         } else {
             // Obtener información de la mesa para pedidos normales
             $mesaInfo = $this->mesaModel->obtenerMesaPorId($mesaId);
@@ -179,29 +167,64 @@ class MozoController
                 exit();
             }
 
-            // Alrededor de la línea 185, después de obtener info de la mesa
-            // Verificar si hay comanda activa para esta mesa
-            $comanda = $this->comandaModel->obtenerComandaActivaPorMesa($mesaId);
-            if (!$comanda) {
-                // Crear nueva comanda
-                $comandaId = $this->comandaModel->crearComanda($mesaId, $usuario['id_user']);
-                $comanda = ['id' => $comandaId, 'estado' => 'nueva'];
-                $detalles = [];
+            // Obtener TODAS las comandas de la mesa
+            $comandasMesa = $this->comandaModel->obtenerComandasActivasPorMesa($mesaId);
+
+            // Si hay un comandaId específico, usar esa comanda
+            if ($comandaId) {
+                $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
+                if (!$comanda || $comanda['mesa_id'] != $mesaId) {
+                    header("Location: " . BASE_URL . "/mozo");
+                    exit();
+                }
             } else {
-                // Obtener detalles de comanda existente
-                $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comanda['id']);
+                // Buscar una comanda editable (nueva o pendiente)
+                $comandaEditable = null;
+                foreach ($comandasMesa as $cmd) {
+                    if (in_array($cmd['estado'], ['nueva', 'pendiente'])) {
+                        $comandaEditable = $cmd;
+                        break;
+                    }
+                }
+
+                if ($comandaEditable) {
+                    $comanda = $comandaEditable;
+                    $comandaId = $comanda['id'];
+                } else {
+                    // Si no hay comanda editable, crear una nueva
+                    $comandaId = $this->comandaModel->crearNuevaComanda($mesaId, $usuario['id_user']);
+                    $comanda = $this->comandaModel->obtenerComandaPorId($comandaId);
+
+                    // Cambiar mesa a ocupada si está libre
+                    if ($mesaInfo['estado'] === 'libre') {
+                        $this->mesaModel->cambiarEstado($mesaId, 'ocupada');
+                    }
+                }
             }
 
-            // Usar el nombre de la mesa
+            // Obtener detalles de la comanda actual
+            $detalles = $this->comandaModel->obtenerDetallesComandaCompletos($comandaId);
+
+            // Obtener comandas anteriores (que no sean la actual)
+            $comandasAnteriores = array_filter($comandasMesa, function ($cmd) use ($comandaId) {
+                return $cmd['id'] != $comandaId;
+            });
+
+            // Calcular número de comanda
+            $numeroComanda = count($comandasAnteriores) + 1;
+
             $mesa = $mesaInfo['nombre'];
         }
+
+        // Verificar si la comanda es editable
+        $puedeEditar = $this->comandaModel->puedeEditarComanda($comandaId);
 
         // Obtener productos disponibles por tipo
         $platos = $this->productoModel->obtenerProductosPorTipo(2, true);
         $bebidas = $this->productoModel->obtenerProductosPorTipo(1, true);
         $combos = $this->productoModel->obtenerProductosPorTipo(4, true);
 
-        // Calcular total
+        // Calcular total de la comanda actual
         $total = 0;
         if (!empty($detalles)) {
             foreach ($detalles as $detalle) {
@@ -209,8 +232,12 @@ class MozoController
             }
         }
 
+        // Calcular total de todas las comandas de la mesa
+        $totalMesa = $mesaId ? $this->comandaModel->obtenerTotalMesa($mesaId) : $total;
+
         require_once __DIR__ . '/../views/mozo/comanda.php';
     }
+
 
     public function agregarItem()
     {
@@ -525,13 +552,14 @@ class MozoController
         }
 
         try {
-            // Marcar todas las comandas de la mesa como pagadas/finalizadas
-            $this->comandaModel->finalizarComandasMesa($mesaId);
+            // Procesar el pago completo (elimina todas las comandas y libera la mesa)
+            $resultado = $this->comandaModel->procesarPagoCompleto($mesaId);
 
-            // Cambiar estado de mesa a libre
-            $this->mesaModel->cambiarEstado($mesaId, 'libre');
-
-            echo json_encode(['success' => true]);
+            if ($resultado) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Error al procesar el pago']);
+            }
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }

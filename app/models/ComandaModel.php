@@ -35,6 +35,17 @@ class ComandaModel
         return $this->conn->insert_id;
     }
 
+    // NUEVO: Crear comanda siempre nueva (para múltiples comandas)
+    public function crearNuevaComanda($mesaId, $usuarioId)
+    {
+        $sql = "INSERT INTO comanda (mesa_id, usuario_id, estado, tipo_entrega_id, fecha) 
+                VALUES (?, ?, 'nueva', 3, NOW())";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $mesaId, $usuarioId);
+        $stmt->execute();
+        return $this->conn->insert_id;
+    }
+
     // Obtener comanda activa por mesa
     public function obtenerComandaActivaPorMesa($mesaId)
     {
@@ -46,6 +57,40 @@ class ComandaModel
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_assoc();
+    }
+
+    // NUEVO: Obtener TODAS las comandas activas de una mesa
+    public function obtenerComandasActivasPorMesa($mesaId)
+    {
+        $sql = "SELECT * FROM comanda 
+                WHERE mesa_id = ? 
+                AND estado IN ('nueva', 'pendiente', 'recibido', 'listo', 'entregado') 
+                ORDER BY fecha ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $mesaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $comandas = [];
+        while ($row = $result->fetch_assoc()) {
+            $comandas[] = $row;
+        }
+        
+        return $comandas;
+    }
+
+    // NUEVO: Verificar si se puede editar una comanda
+    public function puedeEditarComanda($comandaId)
+    {
+        $sql = "SELECT estado FROM comanda WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $comandaId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $comanda = $result->fetch_assoc();
+        
+        // Solo se puede editar si está en estado 'nueva' o 'pendiente'
+        return $comanda && in_array($comanda['estado'], ['nueva', 'pendiente']);
     }
 
     // Obtener detalles de comanda con información completa
@@ -73,6 +118,11 @@ class ComandaModel
     // Agregar item a la comanda
     public function agregarItemComanda($comandaId, $productoId, $cantidad, $comentario = '')
     {
+        // NUEVO: Verificar si se puede editar
+        if (!$this->puedeEditarComanda($comandaId)) {
+            return false;
+        }
+        
         $sql = "INSERT INTO detalle_comanda (comanda_id, producto_id, cantidad, comentario, cancelado) 
                 VALUES (?, ?, ?, ?, 0)";
         $stmt = $this->conn->prepare($sql);
@@ -103,6 +153,18 @@ class ComandaModel
     // Eliminar item de comanda
     public function eliminarDetalleComanda($detalleId)
     {
+        // NUEVO: Obtener comanda_id y verificar si se puede editar
+        $sql = "SELECT comanda_id FROM detalle_comanda WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $detalleId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $detalle = $result->fetch_assoc();
+        
+        if (!$detalle || !$this->puedeEditarComanda($detalle['comanda_id'])) {
+            return false;
+        }
+        
         $sql = "DELETE FROM detalle_comanda WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $detalleId);
@@ -294,6 +356,7 @@ class ComandaModel
         $data = $result->fetch_assoc();
         return $data ? $data['minutos'] : 0;
     }
+    
     public function crearComandaDelivery($usuarioId)
     {
         // Crear comanda sin mesa asociada, con tipo de entrega "para llevar" (id=2)
@@ -316,11 +379,6 @@ class ComandaModel
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->fetch_assoc();
-    }
-
-    public function __destruct()
-    {
-        $this->conn->close();
     }
 
     // Obtener total de todas las comandas de una mesa
@@ -396,5 +454,36 @@ class ComandaModel
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $mesaId);
         return $stmt->execute();
+    }
+
+    // NUEVO: Procesar pago completo - elimina todas las comandas y libera la mesa
+    public function procesarPagoCompleto($mesaId)
+    {
+        $this->conn->begin_transaction();
+        
+        try {
+            // Eliminar todas las comandas de la mesa
+            $sql = "DELETE FROM comanda WHERE mesa_id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $mesaId);
+            $stmt->execute();
+            
+            // Liberar la mesa
+            $sql2 = "UPDATE mesas SET estado = 'libre' WHERE id = ?";
+            $stmt2 = $this->conn->prepare($sql2);
+            $stmt2->bind_param("i", $mesaId);
+            $stmt2->execute();
+            
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            return false;
+        }
+    }
+
+    public function __destruct()
+    {
+        $this->conn->close();
     }
 }
